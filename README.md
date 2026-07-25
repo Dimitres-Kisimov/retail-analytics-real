@@ -184,5 +184,5 @@ dataset; the one full-data test skips itself cleanly when `data/raw/` is absent.
 
 ## License
 
-Code: MIT (see `LICENSE`). Data: **CC BY 4.0**, © the dataset authors via the UCI Machine
+Code: © 2026 Dimitres Kisimov — all rights reserved; published for portfolio review. See LICENSE. Data: **CC BY 4.0**, © the dataset authors via the UCI Machine
 Learning Repository — cited above and **not redistributed in this repository**.

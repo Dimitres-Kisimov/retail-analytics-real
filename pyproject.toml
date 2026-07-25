@@ -4,12 +4,11 @@ version = "1.0.0"
 description = "End-to-end analytics on the real UCI Online Retail II dataset: documented cleaning, honest EDA, from-scratch RFM segmentation and leakage-safe weekly revenue forecasting."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { text = "Proprietary" }
 authors = [{ name = "Dimitres Kisimov" }]
 keywords = ["analytics", "retail", "rfm", "forecasting", "data-cleaning", "uci"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Topic :: Office/Business :: Financial :: Spreadsheet",
 ]
 dependencies = [
