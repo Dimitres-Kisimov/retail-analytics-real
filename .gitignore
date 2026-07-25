@@ -1,0 +1,25 @@
+# Raw data is NOT committed (45 MB xlsx; committing raw data is bad practice).
+# Reproduce it with scripts/download_data.py — see README.
+data/raw/
+data/interim/
+data/*.zip
+
+# Generated outputs (rebuilt by `python -m retail --deliverables`)
+deliverables/
+
+# figures/ IS committed on purpose: the PNGs are small and are the visual proof.
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
