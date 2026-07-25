@@ -1,0 +1,67 @@
+# What these analyses are worth to a retailer
+
+Every number in this document that comes from the data is measured; every monetary
+"worth" figure is an **illustrative estimate, labelled as such** — this retailer's real
+margins, costs and retention economics are not in the dataset.
+
+Context (measured): GBP 19.64M gross product revenue over 24.3 months, ~GBP 9.7M/year.
+5,852 identified customers carrying 86.9% of revenue; 13.1% of revenue unattributed.
+
+## 1. Revenue concentration -> retention economics
+
+**Measured:** the Champions segment — 1,464 customers, 25% of identified customers —
+carries **69.0%** of identified revenue (GBP 11.77M over the period). The top four
+segments carry ~83%.
+
+**Why it matters:** with concentration this extreme, small retention changes in one
+segment dominate everything else. *Illustrative estimate:* if churn among Champions
+were reduced by 2 percentage points, at the segment's average value of GBP 8,038 per
+customer over the period, that is on the order of GBP 235k of protected revenue per
+period (2% x 1,464 x 8,038). The precise figure depends on churn and margin data the
+dataset does not contain; the segmentation tells you *where* to spend retention budget,
+not the exact ROI.
+
+**Deliverable:** the RFM sheet ranks every identified customer; "At Risk" (344
+customers, 5.6% of revenue) and "Can't Lose Them" (16 high-value lapsed accounts) are
+the actionable call lists.
+
+## 2. Returns visibility
+
+**Measured:** returns run at 3.65% of gross value overall, with single-event spikes
+(January 2011: 13.6%; December 2011: 28.3% — one 80,995-unit same-day cancellation
+against a 9-day month). The monthly series separates process-level returns (~2-4%)
+from one-off events.
+
+**Why it matters:** a returns dashboard that doesn't separate one-off cancellations
+from systemic returns will trigger false alarms. *Illustrative estimate:* at this
+revenue scale, each percentage point of avoidable returns is roughly GBP 100k/year
+gross — worth monitoring, not worth panicking over a single spike.
+
+## 3. Forecasting for stock and cash planning
+
+**Measured:** on 104 weekly revenue points, seasonal-naive ("same week last year")
+achieves mean MASE 1.094 across five rolling-origin folds and beats Holt-Winters and a
+lag-features linear model on 4 of 5 folds.
+
+**Why it matters (honestly):** with one full seasonal cycle of training data, the
+defensible planning baseline is *last year's week, adjusted by recent level* — not a
+complex model. The business value here is negative knowledge: it prevents spending on
+forecasting sophistication the data cannot yet support. Two more years of history
+would change that calculus. Per-SKU weekly demand for the top sellers is mostly
+naive/moving-average territory (MASE 0.6-1.1), fine for coarse reorder planning.
+
+## 4. The missing-CustomerID gap as an opportunity
+
+**Measured:** 22.77% of rows and 13.1% of revenue (~GBP 2.57M over the period) have no
+customer identity — guest checkouts or unlinked channels, elevated around the
+2010-2011 holiday season (peaking near 38% of rows in January 2011).
+
+**Why it matters:** that revenue is invisible to segmentation, retention and lifetime
+value. *Illustrative estimate:* converting even a fifth of unattributed revenue into
+identified accounts would grow the addressable RFM base by ~3% of total revenue —
+before any behaviour change — simply by making existing revenue targetable.
+
+## Caveats that bound all of the above
+
+Single retailer, UK-heavy, gift-seasonal, 2009-2011 nominal GBP, wholesale/retail mix,
+final month truncated. These analyses transfer as *method*, not as *numbers*.
