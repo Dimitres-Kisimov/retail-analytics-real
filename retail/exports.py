@@ -168,7 +168,9 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
                     "2. RFM segmentation from scratch (quintile scores, standard segment grid).\n"
                     "3. Weekly revenue forecast: seasonal-naive vs Holt-Winters vs lag-features OLS,\n"
                     "   rolling-origin CV, MASE-scored, leakage-safe (train strictly before origin).\n"
-                    "4. All methods implemented with numpy/pandas only - no ML libraries.",
+                    "4. Market-basket mining (from-scratch Apriori, FP-growth cross-check) on invoice\n"
+                    "   baskets over the top-200 SKUs; all rules in the Excel Rules sheet.\n"
+                    "5. All methods implemented with numpy/pandas only - no ML/mining libraries.",
                 ),
                 (
                     "Honesty notes",
@@ -218,6 +220,8 @@ def export_excel(ctx: dict, path: Path | None = None) -> Path:
         ctx["cv"].to_excel(writer, sheet_name="ForecastCV", index=False)
         ctx["cv_summary"].to_excel(writer, sheet_name="ForecastCV", index=False, startrow=len(ctx["cv"]) + 3)
         ctx["sku_table"].to_excel(writer, sheet_name="TopSKUs", index=False)
+        if "rules_table" in ctx:
+            ctx["rules_table"].to_excel(writer, sheet_name="Rules", index=False)
         weekly = ctx["weekly"].rename("Revenue").reset_index()
         weekly.columns = ["WeekEnding", "Revenue"]
         weekly.to_excel(writer, sheet_name="WeeklyRevenue", index=False)
