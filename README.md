@@ -3,6 +3,17 @@
 End-to-end analytics on a **real, public, messy** dataset: the UCI *Online Retail II*
 transactions of a UK online giftware retailer, December 2009 - December 2011.
 
+![Monthly revenue](figures/monthly_revenue.png)
+
+Gift-season peaks in November of both years are annotated — and so is the fact that
+December 2011 contains only nine days of data. A naive month-over-month read of the tail
+would call it a crash; it's a truncated month.
+
+The short version: **1,067,371** raw rows, **94.0% retained** after a cleaning pipeline
+that logs every step's row cost, **GBP 19,643,862** of revenue analyzed — and the honest
+forecasting headline is that **seasonal-naive wins** (mean MASE 1.094 vs 1.187 for
+Holt-Winters), because one seasonal training cycle is what this data honestly supports.
+
 ## Why this repo exists
 
 The rest of my portfolio is built on synthetic data and says so on the label. This repo is
@@ -67,11 +78,7 @@ gross product revenue. Two honest footnotes:
 
 ## What the data shows (EDA)
 
-![Monthly revenue](figures/monthly_revenue.png)
-
-Gift-season peaks in November of both years are annotated — and so is the fact that
-December 2011 contains only nine days of data. A naive month-over-month read of the tail
-would call it a crash; it's a truncated month.
+Monthly revenue is the chart at the top of this page; the rest of the picture:
 
 ![Top products](figures/top_products.png)
 
