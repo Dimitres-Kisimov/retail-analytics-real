@@ -142,6 +142,83 @@ Per-SKU weekly demand for the top 10 SKUs is in the deliverables, with intermitt
 (zero-week share) noted per SKU. A 4-week moving average or the naive walk wins on most of
 them; SKU 23843 is unforecastable by construction (one giant cancelled order).
 
+## What actually sells together
+
+```bash
+python -m retail --basket
+```
+
+Market-basket analysis on the real invoices. The mining engine — from-scratch Apriori with
+downward-closure pruning, plus an independent from-scratch FP-growth implementation as a
+cross-check — is adapted from my
+[market-basket-analysis](https://github.com/Dimitres-Kisimov/market-basket-analysis) repo,
+which ran it on 14 synthetic categories. Here it runs on real SKUs, so the item universe is
+a documented choice, not a default: **the top 200 stock codes by cleaned gross revenue**
+(5,305 codes total; product level would drown in rare items), each labelled with its most
+frequent normalised description, codes with identical descriptions merged. A basket is one
+sales invoice reduced to tracked items; invoices with fewer than two tracked items cannot
+express a co-purchase and are excluded. Survivors, measured:
+
+- 39,516 sales invoices -> 34,394 contain at least one top-200 SKU -> **29,639 baskets**
+  with >= 2 tracked items (mean basket size 8.6 tracked items — wholesale-sized).
+- Min support **1% of baskets (>= 297 invoices)**: 197 frequent single items, 859 pairs,
+  278 triples. At 2% only 133 pairs survive; at 0.5% it balloons to 4,196 pairs and the
+  tail turns noisy — 1% is the documented middle, not a magic number.
+- **1,222 directed rules** (565 distinct item sets) kept at confidence >= 30% and
+  lift >= 1.10. Support/confidence/lift/leverage/conviction all computed from scratch.
+- FP-growth on a seeded 5,000-basket sample returns **identical itemsets and supports**
+  to Apriori (also asserted in the test suite on the fixture).
+- Rules backed by < 30 invoices get flagged `thin_support`. At these thresholds **none
+  trigger** — min support already guarantees >= 297 invoices; the flag only matters if
+  you lower support below ~0.1%.
+
+![Top co-purchase rules](figures/basket_top_rules.png)
+
+Top 10 item sets by lift (higher-confidence direction shown; both directions of a set
+share support and lift):
+
+| # | rule | support | invoices | confidence | lift |
+|---|---|---:|---:|---:|---:|
+| 1 | PINK + RED 3 PIECE MINI DOTS CUTLERY SET -> BLUE | 1.35% | 399 | 74.3% | **23.4** |
+| 2 | BLUE HAPPY BIRTHDAY BUNTING -> PINK HAPPY BIRTHDAY BUNTING | 1.51% | 448 | 66.3% | **22.9** |
+| 3 | PINK REGENCY TEACUP AND SAUCER -> GREEN + ROSES REGENCY TEACUP AND SAUCER | 2.48% | 735 | 71.8% | **20.6** |
+| 4 | BLACK/BLUE POLKADOT UMBRELLA -> RED RETROSPOT UMBRELLA | 1.39% | 411 | 60.5% | **20.1** |
+| 5 | GREEN REGENCY TEACUP AND SAUCER + REGENCY CAKESTAND 3 TIER -> PINK REGENCY TEACUP AND SAUCER | 1.67% | 495 | 68.7% | **19.9** |
+| 6 | EDWARDIAN PARASOL RED -> EDWARDIAN PARASOL BLACK | 1.34% | 396 | 55.8% | **19.5** |
+| 7 | BLUE 3 PIECE MINI DOTS CUTLERY SET -> PINK 3 PIECE MINI DOTS CUTLERY SET | 2.20% | 651 | 69.3% | **19.1** |
+| 8 | WOOD S/3 CABINET ANT WHITE FINISH + WOODEN PICTURE FRAME WHITE FINISH -> WOOD 2 DRAWER CABINET WHITE FINISH | 1.10% | 325 | 70.0% | **18.7** |
+| 9 | PINK REGENCY TEACUP AND SAUCER -> GREEN REGENCY TEACUP AND SAUCER | 2.92% | 864 | 84.4% | **18.6** |
+| 10 | REGENCY CAKESTAND 3 TIER + ROSES REGENCY TEACUP AND SAUCER -> PINK REGENCY TEACUP AND SAUCER | 1.58% | 469 | 63.0% | **18.2** |
+
+**Plain-language reading.** This is a gift retailer selling to (largely) wholesale buyers,
+and the top of the lift table says one thing loudly: **buyers stock colour and design
+variants of the same product together**. The mini-dots cutlery sets in blue/pink/red, the
+happy-birthday bunting in blue/pink, the Edwardian parasols, the polkadot/retrospot
+umbrellas, the white-finish wooden furniture — all variant families. The Regency tea-set
+family (teacups in pink/green/roses, the 3-tier cakestand, teapot) is the closest thing to
+a true cross-product bundle, and even that is one design line being bought as a set. A
+shop buying the pink Regency teacup goes on to take the green one 84% of the time.
+
+**Honest comparison with the synthetic repo.** The synthetic generator planted category
+bundles (fasteners + power tools + gloves) and mining recovered them at lifts of about
+1.5-2.4 with 30-80% confidence — realistic for 14 broad *categories*, where baselines are
+high. On real SKUs the same engine reports lifts of **18-23**, roughly ten times larger,
+simply because each single item appears in only 3-5% of baskets, so co-occurring at 1.5-3%
+is dozens of times above independence. What genuinely surprised me: I expected classic
+complement pairs (teapot -> teacups is the shape of story the synthetic data planted);
+instead the real signal is almost entirely **variant collecting within an assortment**,
+plus one strong asymmetry the synthetic data never produced — rules point from the rarer
+variant to the more popular one with much higher confidence than the reverse (pink Regency
+-> green at 84%, green -> pink at only 64%), which is exactly what a "core colour +
+optional extra colour" buying pattern looks like.
+
+**Caveats before anyone reprices a shelf:** single UK gift retailer, wholesale quantities
+(one basket is often a shop's stock order, not a consumer's), gift-season concentration,
+and support fractions are shares of *multi-item invoices over the tracked top-200
+assortment*, not of all invoices. Above all: lift is co-purchase frequency versus
+independence — **correlation, not causation**. Nothing here proves that stocking blue
+cutlery *makes* anyone buy pink cutlery.
+
 ## Deliverables
 
 ```bash
@@ -151,15 +228,18 @@ python -m retail --deliverables
 produces `deliverables/retail_analytics_executive.pdf` (5-page executive briefing: citation,
 cleaning-impact table, forecast + CV results, RFM, top SKUs) and
 `deliverables/retail_analytics.xlsx` (sheets: CleaningReport, MonthlyRevenue, RFM,
-ForecastCV, TopSKUs, WeeklyRevenue).
+ForecastCV, TopSKUs, Rules — all 1,222 association rules with metrics and the thin-support
+flag — and WeeklyRevenue). The basket step runs inside the pipeline, so the Rules sheet is
+always current.
 
 ## Reproduce
 
 ```bash
 pip install -r requirements.txt
 python scripts/download_data.py    # one-time, ~45 MB from UCI
-python -m retail --deliverables    # full pipeline: ~1 min first run (xlsx parse), ~15 s after
-pytest -q                          # 20 tests, fixture-based, no download needed
+python -m retail --deliverables    # full pipeline: ~1.5 min first run (xlsx parse), ~45 s after
+python -m retail --basket          # market-basket analysis only (skips politely if data absent)
+pytest -q                          # 27 tests, fixture-based, no download needed
 ruff check .
 ```
 
