@@ -208,6 +208,33 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
 # --------------------------------------------------------------------------- #
 # Excel
 # --------------------------------------------------------------------------- #
+def _write_quality_sheet(writer, ctx: dict) -> None:
+    """Optional data-quality sheet: same numbers the printed report card shows
+    (screen == export). Written only when ctx carries a quality card."""
+    from retail import quality
+
+    before, after = ctx.get("quality_before"), ctx.get("quality_after")
+    if after is None:
+        return
+    sheet = "DataQuality"
+    header = pd.DataFrame({"Data-quality report card": [quality.NOT_A_CERTIFICATION]})
+    header.to_excel(writer, sheet_name=sheet, index=False, startrow=0)
+
+    row = 3
+    if before is not None:
+        summary = pd.DataFrame(
+            {
+                "Dimension": ["OVERALL", *quality.DIMENSIONS],
+                "Before": [before.overall_score, *(before.dimensions[d].score for d in quality.DIMENSIONS)],
+                "After": [after.overall_score, *(after.dimensions[d].score for d in quality.DIMENSIONS)],
+            }
+        )
+        summary["Lift"] = (summary["After"] - summary["Before"]).round(1)
+        summary.to_excel(writer, sheet_name=sheet, index=False, startrow=row)
+        row += len(summary) + 3
+    quality.findings_frame(after).to_excel(writer, sheet_name=sheet, index=False, startrow=row)
+
+
 def export_excel(ctx: dict, path: Path | None = None) -> Path:
     path = path or DELIVERABLES / XLSX_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -222,6 +249,7 @@ def export_excel(ctx: dict, path: Path | None = None) -> Path:
         ctx["sku_table"].to_excel(writer, sheet_name="TopSKUs", index=False)
         if "rules_table" in ctx:
             ctx["rules_table"].to_excel(writer, sheet_name="Rules", index=False)
+        _write_quality_sheet(writer, ctx)
         weekly = ctx["weekly"].rename("Revenue").reset_index()
         weekly.columns = ["WeekEnding", "Revenue"]
         weekly.to_excel(writer, sheet_name="WeeklyRevenue", index=False)

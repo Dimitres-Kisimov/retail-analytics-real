@@ -61,6 +61,20 @@ value. *Illustrative estimate:* converting even a fifth of unattributed revenue 
 identified accounts would grow the addressable RFM base by ~3% of total revenue —
 before any behaviour change — simply by making existing revenue targetable.
 
+## 5. Making the cleaning pipeline's value measurable
+
+**Measured:** the generic data-quality report card (`retail/quality.py`,
+`python -m retail --report-card`) scores the data before and after cleaning on the
+same declared checks and lifts the grade from **C (uniqueness failing on 34,335
+duplicate rows, consistency warning on 22,950 non-positive quantities) to A**.
+
+**Why it matters:** "we cleaned the data" is an assertion; a report card with
+stated weights and rules turns it into a number a stakeholder can audit. The
+module is dataset-agnostic and config-driven, so the same scorecard is reusable
+on any tabular dataset (a supplier feed, a CRM export) — the retail run is just
+the demo. It is explicitly a heuristic scorecard, **not** a certification that
+the data is true; a high score means the declared checks passed.
+
 ## Caveats that bound all of the above
 
 Single retailer, UK-heavy, gift-seasonal, 2009-2011 nominal GBP, wholesale/retail mix,

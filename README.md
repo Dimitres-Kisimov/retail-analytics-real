@@ -226,6 +226,61 @@ assortment*, not of all invoices. Above all: lift is co-purchase frequency versu
 independence — **correlation, not causation**. Nothing here proves that stocking blue
 cutlery *makes* anyone buy pink cutlery.
 
+## Data-quality report card
+
+```bash
+python -m retail --report-card     # scores the data BEFORE and AFTER cleaning
+```
+
+A **generic, config-driven** module (`retail/quality.py`) that scores any pandas
+DataFrame across five standard dimensions and renders a report card. It is
+dataset-agnostic — give it a frame and an optional config (per-column expected
+type, range/regex/domain, key columns, a few cross-field rules) — and here it is
+pointed at the real UCI data to make the cleaning pipeline's value *measurable*.
+
+**It is a heuristic scorecard with stated weights and stated rules, NOT a
+certification of data correctness.** A high score means the data *passed the
+declared checks*, not that the data is true. That caveat is printed on the card
+header and in the module docstring.
+
+Every check scores `100 * (1 - violations / evaluated)`; a dimension's score is
+the mean of its checks, and the overall score is a weighted mean with **explicit,
+documented weights** — Completeness **0.30**, Validity **0.25**, Consistency
+**0.20**, Uniqueness **0.15**, Plausibility **0.10** (renormalised over the
+dimensions that actually run). A dimension's status is its *worst* check, and the
+letter grade is **capped** by the worst hard-dimension status (a failing hard
+check caps at C, a warning at B). Plausibility is an **outlier heuristic**
+(3×IQR) — it never hard-fails and never caps the grade.
+
+Measured on the full dataset (same config applied to both frames):
+
+| dimension | raw | cleaned | what moved |
+|---|---:|---:|---|
+| Completeness | 100.0 [OK] | 100.0 [OK] | unchanged by design (see note) |
+| Validity | 100.0 [OK] | 100.0 [OK] | types/ranges already conform per-row |
+| Uniqueness | 96.8 **[FAIL]** | 100.0 [OK] | **34,335 exact duplicate rows removed** |
+| Consistency | 99.1 [WARN] | 100.0 [OK] | **22,950 non-positive qty + 6,207 bad prices resolved** |
+| Plausibility (heuristic) | 96.7 [WARN] | 97.1 [WARN] | extreme outliers remain (not errors) |
+| **Overall grade** | **C (99.0)** | **A (99.7)** | **raw C → cleaned A** |
+
+**Honest reading.** The per-*row* scores are all high because real-data problems
+are concentrated in a *minority* of rows — which is exactly what the pipeline
+removes. The letter grade, not the raw score, tells the story: raw data fails on
+duplicates and warns on sign errors, so it is capped to **C**; the cleaned frame
+passes every hard check and earns an **A**. Two honest footnotes, on brand:
+
+- **Completeness does not move.** Missing `CustomerID` (declared *nullable*) is
+  kept by design — flagged, never dropped — so cleaning can't and shouldn't lift
+  completeness. The lift is entirely in Uniqueness and Consistency.
+- **The cleaned data is not "perfect".** Plausibility still warns: ~2–4% of
+  `Quantity`/`Price` values are extreme outliers by the 3×IQR rule. Those are
+  large legitimate wholesale orders, not errors — so the check is labelled a
+  heuristic and the card reports them rather than claiming a spotless dataset.
+
+The full before/after card is written to `deliverables/data_quality_report_card.md`
+and, inside the pipeline, to the **DataQuality** sheet of the Excel workbook
+(screen == export). The module is self-contained and reusable on any dataset.
+
 ## Deliverables
 
 ```bash
@@ -236,8 +291,9 @@ produces `deliverables/retail_analytics_executive.pdf` (5-page executive briefin
 cleaning-impact table, forecast + CV results, RFM, top SKUs) and
 `deliverables/retail_analytics.xlsx` (sheets: CleaningReport, MonthlyRevenue, RFM,
 ForecastCV, TopSKUs, Rules — all 1,222 association rules with metrics and the thin-support
-flag — and WeeklyRevenue). The basket step runs inside the pipeline, so the Rules sheet is
-always current.
+flag — DataQuality — the raw-vs-cleaned report card with per-dimension lift and the flat
+findings list — and WeeklyRevenue). The basket and report-card steps run inside the
+pipeline, so the Rules and DataQuality sheets are always current.
 
 ## Reproduce
 

@@ -3,6 +3,7 @@
     python -m retail --deliverables     # ingest -> clean -> EDA -> RFM -> forecast -> basket -> PDF/Excel
     python -m retail --basket           # market-basket analysis only (top rules + figure)
     python -m retail --quality          # just the raw-quality report
+    python -m retail --report-card      # data-quality report card: raw vs cleaned (measured lift)
 
 Requires data/raw/online_retail_II.xlsx (run scripts/download_data.py once).
 Console output is UTF-8-safe and uses ASCII status markers only.
@@ -14,10 +15,15 @@ import argparse
 import sys
 import time
 
-from retail import basket, clean, eda, exports, forecast, ingest, paths, rfm
+import pandas as pd
+
+from retail import basket, clean, eda, exports, forecast, ingest, paths, quality, rfm
 from retail.util import configure_stdout, fmt_int, fmt_pct
 
 MIN_DELIVERABLE_BYTES = 10_000
+
+# The committed real sample used when the full ~1M-row dataset is not downloaded.
+FIXTURE_SAMPLE = paths.ROOT / "tests" / "fixtures" / "sample.csv"
 
 
 def run_pipeline(force_reingest: bool = False) -> int:
@@ -37,6 +43,10 @@ def run_pipeline(force_reingest: bool = False) -> int:
         f"      sales rows {fmt_int(len(sales))} | returns rows {fmt_int(len(returns))} | "
         f"revenue GBP {sales['Revenue'].sum():,.0f}"
     )
+    q_cfg = retail_quality_config()
+    quality_before = quality.assess(df, q_cfg, label="RAW")
+    quality_after = quality.assess(sales, q_cfg, label="CLEANED sales")
+    print(f"      quality {quality.compare(quality_before, quality_after)}")
 
     print("[3/7] eda: writing figures/")
     for fig_path in eda.make_all_figures(sales, returns):
@@ -76,6 +86,8 @@ def run_pipeline(force_reingest: bool = False) -> int:
         "rfm_summary": rfm_summary,
         "sku_table": sku_table,
         "rules_table": basket.rules_table(basket_result.rules),
+        "quality_before": quality_before,
+        "quality_after": quality_after,
     }
     pdf_path = exports.export_pdf(ctx)
     xlsx_path = exports.export_excel(ctx)
@@ -176,15 +188,121 @@ def run_basket(force_reingest: bool = False) -> int:
     return 0
 
 
+def retail_quality_config() -> quality.QualityConfig:
+    """The declared quality expectations for the Online Retail II schema.
+
+    Deliberately the SAME config is applied to the raw frame and to the cleaned
+    sales frame, so the before/after scores are directly comparable. CustomerID
+    and Description are declared NULLABLE on purpose -- the cleaning pipeline
+    keeps missing-CustomerID rows by design, so completeness is honestly not
+    where the lift comes from; uniqueness and consistency are.
+    """
+    return quality.QualityConfig(
+        columns={
+            "Invoice": quality.ColumnRule(expected_type="string", required=True, regex=r"[A-Za-z]?\d+"),
+            "StockCode": quality.ColumnRule(expected_type="string", required=True),
+            "Description": quality.ColumnRule(expected_type="string", required=False),
+            "Quantity": quality.ColumnRule(expected_type="integer", required=True),
+            "InvoiceDate": quality.ColumnRule(expected_type="datetime", required=True),
+            "Price": quality.ColumnRule(expected_type="numeric", required=True, min_value=0.0),
+            "CustomerID": quality.ColumnRule(expected_type="numeric", required=False),
+            "Country": quality.ColumnRule(expected_type="string", required=True),
+        },
+        rules=(
+            quality.Rule("Quantity is positive", "Quantity", ">", 0),
+            quality.Rule("Price is positive", "Price", ">", 0),
+            quality.Rule("InvoiceDate within 2009-2011 window", "InvoiceDate", "between",
+                         ("2009-01-01", "2012-01-01")),
+        ),
+        dedup_columns=tuple(clean.DEDUP_COLUMNS),
+        plausibility_columns=("Quantity", "Price"),
+    )
+
+
+def _load_frame_or_fixture(force_reingest: bool = False) -> tuple[pd.DataFrame, bool]:
+    """Return (raw_frame, used_fixture). Degrades to the committed sample if the
+    full dataset is not present, and says so -- never downloads anything."""
+    try:
+        return ingest.load_raw(force=force_reingest), False
+    except FileNotFoundError:
+        df = pd.read_csv(FIXTURE_SAMPLE, encoding="utf-8")
+        df["Invoice"] = df["Invoice"].astype(str)
+        df["StockCode"] = df["StockCode"].astype(str)
+        df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
+        df["CustomerID"] = df["CustomerID"].astype("Int64")
+        return df, True
+
+
+def run_report_card(force_reingest: bool = False, write: bool = True) -> int:
+    """Score data quality BEFORE and AFTER the cleaning pipeline and report the lift."""
+    raw, used_fixture = _load_frame_or_fixture(force_reingest)
+    source = "committed 1,950-row sample fixture" if used_fixture else "full Online Retail II dataset"
+    if used_fixture:
+        print(f"[INFO] full dataset not found -> running on the {source} (no download).")
+    else:
+        print(f"[INFO] running on the {source}.")
+
+    cfg = retail_quality_config()
+    print("[1/3] scoring RAW data")
+    before = quality.assess(raw, cfg, label=f"RAW ({source})")
+
+    print("[2/3] clean: documented pipeline")
+    sales = clean.clean(raw).sales
+    print(f"      raw rows {fmt_int(len(raw))} -> cleaned sales rows {fmt_int(len(sales))}")
+
+    print("[3/3] scoring CLEANED sales")
+    after = quality.assess(sales, cfg, label=f"CLEANED sales ({source})")
+
+    print()
+    print(quality.render_report_card(before))
+    print()
+    print(quality.render_report_card(after))
+    print()
+    print(quality.compare(before, after))
+    # Honest note on what did NOT move, if completeness barely changed.
+    b_comp, a_comp = before.dimensions["Completeness"].score, after.dimensions["Completeness"].score
+    if abs(a_comp - b_comp) < 1.0:
+        print("[HONEST] Completeness barely moved: missing CustomerID/Description are kept by "
+              "design (flagged, not dropped), so the lift is in Uniqueness and Consistency.")
+    # Report remaining problems in the cleaned data honestly.
+    residual = [f for f in after.findings if f.status != "pass"]
+    if residual:
+        print(f"[HONEST] {len(residual)} check(s) still not 'pass' AFTER cleaning "
+              "(the card does not claim a perfect dataset):")
+        for f in residual[:8]:
+            print(f"         - {f.dimension}/{f.check}: {f.explanation}")
+
+    if write:
+        out = paths.DELIVERABLES / "data_quality_report_card.md"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        body = "\n\n".join([
+            "# Data-quality report card -- Online Retail II (raw vs cleaned)",
+            "```",
+            quality.render_report_card(before),
+            "```",
+            "```",
+            quality.render_report_card(after),
+            "```",
+            quality.compare(before, after),
+        ])
+        out.write_text(body, encoding="utf-8")
+        print(f"      [OK] wrote {out.name}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     configure_stdout()
     parser = argparse.ArgumentParser(prog="python -m retail", description=__doc__)
     parser.add_argument("--deliverables", action="store_true", help="run the full pipeline and write PDF + Excel")
     parser.add_argument("--basket", action="store_true", help="market-basket analysis: top co-purchase rules + figure")
     parser.add_argument("--quality", action="store_true", help="print the raw-quality report only")
+    parser.add_argument("--report-card", action="store_true",
+                        help="data-quality report card: score raw vs cleaned and report the lift")
     parser.add_argument("--force-reingest", action="store_true", help="ignore the interim cache")
     args = parser.parse_args(argv)
 
+    if args.report_card:
+        return run_report_card(force_reingest=args.force_reingest)
     if args.basket:
         return run_basket(force_reingest=args.force_reingest)
     if args.quality:
