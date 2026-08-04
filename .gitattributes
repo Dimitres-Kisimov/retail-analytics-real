@@ -1,0 +1,4 @@
+# Hand-drawn, deterministic SVG figures are pinned to LF so that re-running the
+# generator (`python -m retail --cohort`) yields a byte-identical file on every
+# platform, regardless of core.autocrlf. The determinism guarantee depends on it.
+*.svg text eol=lf

@@ -1,7 +1,8 @@
 """End-to-end pipeline entry point.
 
-    python -m retail --deliverables     # ingest -> clean -> EDA -> RFM -> forecast -> basket -> PDF/Excel
+    python -m retail --deliverables     # ingest -> clean -> EDA -> RFM -> cohort -> forecast -> basket -> PDF/Excel
     python -m retail --basket           # market-basket analysis only (top rules + figure)
+    python -m retail --cohort           # cohort repeat-purchase retention only (triangle + SVG + CSV)
     python -m retail --quality          # just the raw-quality report
     python -m retail --report-card      # data-quality report card: raw vs cleaned (measured lift)
 
@@ -17,7 +18,7 @@ import time
 
 import pandas as pd
 
-from retail import basket, clean, eda, exports, forecast, ingest, paths, quality, rfm
+from retail import basket, clean, cohort, eda, exports, forecast, ingest, paths, quality, rfm
 from retail.util import configure_stdout, fmt_int, fmt_pct
 
 MIN_DELIVERABLE_BYTES = 10_000
@@ -29,12 +30,12 @@ FIXTURE_SAMPLE = paths.ROOT / "tests" / "fixtures" / "sample.csv"
 def run_pipeline(force_reingest: bool = False) -> int:
     t0 = time.time()
 
-    print("[1/7] ingest: loading raw workbook (cached to data/interim/ after first run)")
+    print("[1/8] ingest: loading raw workbook (cached to data/interim/ after first run)")
     df = ingest.load_raw(force=force_reingest)
     raw_report = ingest.raw_quality_report(df)
     ingest.print_quality_report(raw_report)
 
-    print("[2/7] clean: documented pipeline")
+    print("[2/8] clean: documented pipeline")
     result = clean.clean(df)
     clean_table = result.report()
     print(clean_table.to_string(index=False))
@@ -48,16 +49,25 @@ def run_pipeline(force_reingest: bool = False) -> int:
     quality_after = quality.assess(sales, q_cfg, label="CLEANED sales")
     print(f"      quality {quality.compare(quality_before, quality_after)}")
 
-    print("[3/7] eda: writing figures/")
+    print("[3/8] eda: writing figures/")
     for fig_path in eda.make_all_figures(sales, returns):
         print(f"      [OK] {fig_path.name}")
 
-    print("[4/7] rfm: segmentation on identified customers")
+    print("[4/8] rfm: segmentation on identified customers")
     rfm_customers, rfm_summary = rfm.run_rfm(sales)
     print(f"      customers scored: {fmt_int(len(rfm_customers))}")
     print(rfm_summary.to_string(index=False))
 
-    print("[5/7] forecast: rolling-origin CV on weekly revenue")
+    print("[5/8] cohort: repeat-purchase retention by acquisition month")
+    cohort_result = cohort.cohort_retention(sales)
+    print(f"      identified customers in cohorts: {fmt_int(cohort_result.n_customers)} | "
+          f"cohorts: {len(cohort_result.triangle)} | last complete month {cohort_result.last_complete_month}")
+    print(f"      [HEADLINE] {cohort.headline_text(cohort_result)}")
+    svg_path = cohort.write_svg(cohort_result)
+    csv_path = cohort.write_csv(cohort_result)
+    print(f"      [OK] {svg_path.name} (committed figure) | {csv_path.name} (deliverable)")
+
+    print("[6/8] forecast: rolling-origin CV on weekly revenue")
     weekly = forecast.weekly_revenue(sales)
     cv = forecast.cross_validate(weekly)
     cv_summary = forecast.cv_summary(cv)
@@ -66,14 +76,14 @@ def run_pipeline(force_reingest: bool = False) -> int:
     final_fold = forecast.final_fold_forecast(weekly)
     sku_table = forecast.top_sku_forecasts(sales)
 
-    print("[6/7] basket: market-basket mining (Apriori + FP-growth cross-check)")
+    print("[7/8] basket: market-basket mining (Apriori + FP-growth cross-check)")
     basket_result = basket.run_basket_analysis(sales)
     _print_basket_summary(basket_result)
     fig_path = basket.fig_top_rules(basket_result.rules, out_dir=paths.FIGURES)
     if fig_path is not None:
         print(f"      [OK] {fig_path.name}")
 
-    print("[7/7] exports: PDF + Excel deliverables")
+    print("[8/8] exports: PDF + Excel deliverables")
     ctx = {
         "raw_report": raw_report,
         "clean_table": clean_table,
@@ -84,6 +94,7 @@ def run_pipeline(force_reingest: bool = False) -> int:
         "cv_summary": cv_summary,
         "final_fold": final_fold,
         "rfm_summary": rfm_summary,
+        "cohort_result": cohort_result,
         "sku_table": sku_table,
         "rules_table": basket.rules_table(basket_result.rules),
         "quality_before": quality_before,
@@ -185,6 +196,36 @@ def run_basket(force_reingest: bool = False) -> int:
         print("      [WARN] no solid rules to plot (all thin-support or none mined)")
     else:
         print(f"      [OK] {fig_path.name}")
+    return 0
+
+
+def run_cohort(force_reingest: bool = False) -> int:
+    """Standalone cohort-retention run: triangle + committed SVG + CSV + headline."""
+    try:
+        df = ingest.load_raw(force=force_reingest)
+    except FileNotFoundError:
+        print(
+            "[SKIP] raw data not found - run `python scripts/download_data.py` first "
+            "(the dataset is deliberately not committed)."
+        )
+        return 0
+    print("[1/3] clean: documented pipeline")
+    sales = clean.clean(df).sales
+    print(f"      sales rows {fmt_int(len(sales))}")
+    print("[2/3] cohort: repeat-purchase retention by acquisition month")
+    result = cohort.cohort_retention(sales)
+    print(f"      identified customers in cohorts: {fmt_int(result.n_customers)} | "
+          f"cohorts: {len(result.triangle)} | last complete month {result.last_complete_month}")
+    print("      headline retention curve (size-weighted across observable cohorts):")
+    curve = result.curve.copy()
+    curve["avg_retention"] = (100.0 * curve["avg_retention"]).round(1)
+    print(curve.head(13).to_string(index=False))
+    print(f"      [HEADLINE] {cohort.headline_text(result)}")
+    print("[3/3] outputs: figures/cohort_retention.svg + deliverables/cohort_retention.csv")
+    svg_path = cohort.write_svg(result)
+    csv_path = cohort.write_csv(result)
+    print(f"      [OK] {svg_path.name} ({svg_path.stat().st_size / 1024:.1f} KB, committed)")
+    print(f"      [OK] {csv_path.name} ({csv_path.stat().st_size / 1024:.1f} KB, deliverable)")
     return 0
 
 
@@ -295,6 +336,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m retail", description=__doc__)
     parser.add_argument("--deliverables", action="store_true", help="run the full pipeline and write PDF + Excel")
     parser.add_argument("--basket", action="store_true", help="market-basket analysis: top co-purchase rules + figure")
+    parser.add_argument("--cohort", action="store_true",
+                        help="cohort repeat-purchase retention: triangle + SVG heatmap/curve + CSV")
     parser.add_argument("--quality", action="store_true", help="print the raw-quality report only")
     parser.add_argument("--report-card", action="store_true",
                         help="data-quality report card: score raw vs cleaned and report the lift")
@@ -305,6 +348,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_report_card(force_reingest=args.force_reingest)
     if args.basket:
         return run_basket(force_reingest=args.force_reingest)
+    if args.cohort:
+        return run_cohort(force_reingest=args.force_reingest)
     if args.quality:
         report = ingest.raw_quality_report(ingest.load_raw(force=args.force_reingest))
         ingest.print_quality_report(report)

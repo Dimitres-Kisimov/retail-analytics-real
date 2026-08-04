@@ -118,6 +118,59 @@ GBP 17.07M = 86.9% of total):
 A quarter of identified customers (Champions) carry 69% of identified revenue — a real
 concentration number, not a synthetic one.
 
+## Cohort retention (repeat purchase)
+
+```bash
+python -m retail --cohort     # cohort triangle + SVG heatmap/curve + CSV
+```
+
+Where RFM is a *snapshot* of who's valuable now, cohort retention is the *time* dimension:
+group the **5,852 identified customers** by their first-purchase month, then track what
+share of each cohort comes back to buy in each later month. A customer is "retained at
+month _k_" if they placed **any** invoice in the calendar month _k_ months after their first
+(so this is month-by-month activity retention, not cumulative — skipping a month and
+returning the next counts as retained in the month they bought). Offset 0 is the
+acquisition month, 100% by definition. Everything is measured from the cleaned real
+transactions — nothing modelled.
+
+![Cohort retention](figures/cohort_retention.svg)
+
+Two honesty guards are built into the numbers, not bolted on after:
+
+- **Right-censoring.** A cohort acquired late can only be observed for a few months. Each
+  cell is filled only when its target month is a *complete* month in the data; otherwise
+  it's left blank. The headline curve at month _k_ therefore averages only the cohorts old
+  enough to have been observed at _k_ — it never counts "hasn't happened yet" as churn.
+- **Incomplete final month.** December 2011 holds nine trading days, so it is excluded as a
+  target month (last complete month: **2011-11**). No absence in a partial month is scored
+  as a lost customer.
+
+**Headline: month-1 repeat rate 23.3%, holding near 22.2% by month 6** (size-weighted across
+the cohorts observable at each offset):
+
+| months since first purchase | 1 | 2 | 3 | 4 | 5 | 6 | 9 | 12 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| repeat rate | **23.3%** | 23.6% | 25.0% | 22.8% | 21.9% | **22.2%** | 19.4% | 22.7% |
+
+**Plain-language reading.** The striking thing is what *doesn't* happen: the curve barely
+decays. For a consumer shop you'd expect month-1 retention to fall off a cliff; here it
+plateaus in the low-20s and even **rebounds to 22.7% by month 12**. That is the wholesale
+nature of this retailer showing through — a large share of customers are shops that
+**re-order on an annual rhythm**, so the year-anniversary month lifts retention back up
+rather than letting it fade. The shallow trough is around month 9 (**19.4%**). The launch
+cohort (December 2009, 951 customers) is the strongest by far: 35.0% back at month 1,
+peaking at **49.6% in November 2010** (its first gift season) and still at 40.6% two years
+on — the long-standing wholesale accounts that anchor the base. Later cohorts settle lower
+(~15–23% at month 1), which is why the size-weighted average sits at 23.3%.
+
+**Caveats.** Identified customers only — the 22.77% of rows without a `CustomerID` are
+structurally invisible here, exactly as in RFM, so this covers the 86.9% of revenue that is
+attributable. Single UK gift retailer with wholesale-heavy baskets, so these repeat rates
+should not be read as consumer-ecommerce benchmarks. Retention is measured co-purchase
+behaviour, not a fitted survival model; the full cohort×month triangle (with cohort sizes
+and every censored cell blank) is written to `deliverables/cohort_retention.csv` and the
+**Cohort** sheet of the Excel workbook.
+
 ## Forecasting: honest, leakage-safe, MASE-scored
 
 Weekly revenue (104 complete weeks; the two partial edge weeks are dropped), rolling-origin
@@ -287,13 +340,15 @@ and, inside the pipeline, to the **DataQuality** sheet of the Excel workbook
 python -m retail --deliverables
 ```
 
-produces `deliverables/retail_analytics_executive.pdf` (5-page executive briefing: citation,
-cleaning-impact table, forecast + CV results, RFM, top SKUs) and
-`deliverables/retail_analytics.xlsx` (sheets: CleaningReport, MonthlyRevenue, RFM,
+produces `deliverables/retail_analytics_executive.pdf` (6-page executive briefing: citation,
+cleaning-impact table, forecast + CV results, RFM, cohort retention, top SKUs),
+`deliverables/retail_analytics.xlsx` (sheets: CleaningReport, MonthlyRevenue, RFM, Cohort —
+the full cohort×month retention triangle with sizes and the size-weighted curve —
 ForecastCV, TopSKUs, Rules — all 1,222 association rules with metrics and the thin-support
 flag — DataQuality — the raw-vs-cleaned report card with per-dimension lift and the flat
-findings list — and WeeklyRevenue). The basket and report-card steps run inside the
-pipeline, so the Rules and DataQuality sheets are always current.
+findings list — and WeeklyRevenue), and `deliverables/cohort_retention.csv` (the same
+triangle as a flat CSV). The basket, cohort and report-card steps run inside the pipeline,
+so every sheet is always current.
 
 ## Reproduce
 
@@ -302,7 +357,8 @@ pip install -r requirements.txt
 python scripts/download_data.py    # one-time, ~45 MB from UCI
 python -m retail --deliverables    # full pipeline: ~1.5 min first run (xlsx parse), ~45 s after
 python -m retail --basket          # market-basket analysis only (skips politely if data absent)
-pytest -q                          # 27 tests, fixture-based, no download needed
+python -m retail --cohort          # cohort repeat-purchase retention only (skips politely if absent)
+pytest -q                          # 57 tests, fixture-based, no download needed
 ruff check .
 ```
 

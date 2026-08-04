@@ -144,6 +144,53 @@ def _rfm_page(pp: PdfPages, ctx: dict) -> None:
     plt.close(fig)
 
 
+def _cohort_page(pp: PdfPages, ctx: dict) -> None:
+    """Cohort retention heatmap (triangle) + size-weighted headline curve."""
+    from retail.cohort import DISPLAY_OFFSETS
+
+    result = ctx.get("cohort_result")
+    if result is None or result.triangle.empty:
+        return
+    _style()
+    tri = result.triangle
+    ncol = min(DISPLAY_OFFSETS, int(tri.columns.max())) + 1
+    mat = tri[[k for k in tri.columns if k < ncol]].to_numpy(dtype=float)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 8.5), height_ratios=[2.4, 1])
+    ax1.imshow(mat, aspect="auto", cmap="Blues", vmin=0.0, vmax=1.0)
+    ax1.set_xticks(range(ncol))
+    ax1.set_xticklabels(range(ncol), fontsize=8)
+    ax1.set_yticks(range(len(tri.index)))
+    ax1.set_yticklabels(tri.index, fontsize=7)
+    ax1.set_xlabel("months since first purchase")
+    ax1.grid(False)
+    for i in range(mat.shape[0]):
+        for j in range(mat.shape[1]):
+            v = mat[i, j]
+            if not np.isnan(v):
+                ax1.text(j, i, f"{round(100 * v)}", ha="center", va="center",
+                         fontsize=6.5, color="white" if v > 0.55 else INK_2)
+    ax1.set_title(
+        f"Cohort repeat-purchase retention (% of each first-purchase cohort active later; "
+        f"{result.n_customers:,} identified customers)", fontsize=11)
+
+    curve = result.curve
+    curve = curve[curve["offset"] < ncol]
+    ax2.plot(curve["offset"], 100 * curve["avg_retention"], color=BLUE, linewidth=2, marker="o", markersize=4)
+    ax2.set_xticks(range(ncol))
+    ax2.set_ylim(0, 100)
+    ax2.set_xlabel("months since first purchase")
+    ax2.set_ylabel("repeat rate (%)")
+    ax2.grid(axis="x", visible=False)
+    ax2.set_title("Headline retention curve (size-weighted across observable cohorts)", fontsize=10)
+    note = (f"Last complete month {result.last_complete_month}; "
+            f"blank cells are right-censored (not yet observable). Offset 0 = acquisition month (100%).")
+    fig.text(0.07, 0.045, note, fontsize=8, color=MUTED)
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    pp.savefig(fig)
+    plt.close(fig)
+
+
 def export_pdf(ctx: dict, path: Path | None = None) -> Path:
     path = path or DELIVERABLES / PDF_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -190,6 +237,7 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
         )
         _forecast_page(pp, ctx)
         _rfm_page(pp, ctx)
+        _cohort_page(pp, ctx)
         sku = ctx["sku_table"].copy()
         sku["Description"] = sku["Description"].astype(str).str.slice(0, 30)
         sku.columns = ["SKU", "Description", "Units", "Weeks", "Zero-wk share",
@@ -235,6 +283,29 @@ def _write_quality_sheet(writer, ctx: dict) -> None:
     quality.findings_frame(after).to_excel(writer, sheet_name=sheet, index=False, startrow=row)
 
 
+def _write_cohort_sheet(writer, ctx: dict) -> None:
+    """Cohort retention triangle + the size-weighted headline curve (screen == export)."""
+    from retail import cohort
+
+    result = ctx.get("cohort_result")
+    if result is None or result.triangle.empty:
+        return
+    sheet = "Cohort"
+    header = pd.DataFrame(
+        {"Cohort repeat-purchase retention (% of each first-purchase cohort active m months later)": [
+            f"identified customers {result.n_customers:,} | last complete month "
+            f"{result.last_complete_month} | blank cells are not-yet-observable (right-censored)"
+        ]}
+    )
+    header.to_excel(writer, sheet_name=sheet, index=False, startrow=0)
+    cohort.triangle_frame(result).to_excel(writer, sheet_name=sheet, index=False, startrow=2)
+    row = len(result.triangle) + 5
+    curve = result.curve.copy()
+    curve["avg_retention_pct"] = (100.0 * curve["avg_retention"]).round(2)
+    curve = curve[["offset", "avg_retention_pct", "cohorts_observed", "customers_observed", "repeat_customers"]]
+    curve.to_excel(writer, sheet_name=sheet, index=False, startrow=row)
+
+
 def export_excel(ctx: dict, path: Path | None = None) -> Path:
     path = path or DELIVERABLES / XLSX_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -244,6 +315,7 @@ def export_excel(ctx: dict, path: Path | None = None) -> Path:
         monthly["ReturnsRate"] = ctx["returns_rate"].to_numpy()
         monthly.to_excel(writer, sheet_name="MonthlyRevenue", index=False)
         ctx["rfm_summary"].to_excel(writer, sheet_name="RFM", index=False)
+        _write_cohort_sheet(writer, ctx)
         ctx["cv"].to_excel(writer, sheet_name="ForecastCV", index=False)
         ctx["cv_summary"].to_excel(writer, sheet_name="ForecastCV", index=False, startrow=len(ctx["cv"]) + 3)
         ctx["sku_table"].to_excel(writer, sheet_name="TopSKUs", index=False)
