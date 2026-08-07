@@ -171,6 +171,75 @@ behaviour, not a fitted survival model; the full cohort×month triangle (with co
 and every censored cell blank) is written to `deliverables/cohort_retention.csv` and the
 **Cohort** sheet of the Excel workbook.
 
+## Predictive customer lifetime value
+
+```bash
+python -m retail --clv     # BG/NBD + Gamma-Gamma fit, out-of-sample holdout check, figure + CSV
+```
+
+RFM is a *snapshot* of who is valuable now; cohort retention is the *descriptive* time
+dimension. CLV is the *predictive* leg: it turns each customer's history into an expected
+number of future transactions and an expected value per transaction, and multiplies them
+into an expected forward revenue. Two from-scratch models, the standard pairing, numpy /
+pandas / scipy only (no `lifetimes`, no ML library):
+
+- **BG/NBD** (Fader, Hardie & Lee 2005) models *how many* future transactions each customer
+  makes, from three sufficient statistics measured off the cleaned sales — repeat frequency,
+  recency (first→last purchase, in days) and age *T* (first purchase→observation end). The
+  four population parameters are fit by maximum likelihood; the fit is deterministic (fixed
+  start, so it reproduces byte-for-byte). Multiple invoices on the same day count once.
+- **Gamma-Gamma** (Fader & Hardie 2013) models *how much* each transaction is worth, under
+  the assumption that a customer's average transaction value is independent of their purchase
+  frequency — an assumption this repo **measures** rather than asserts: the frequency-vs-value
+  correlation on the real data is **0.020**, essentially the zero the model wants.
+
+`CLV(horizon) = E[transactions over horizon] × E[value per transaction]`, over the next
+**180 days**, on the **5,852 identified customers** (4,179 repeat, 1,673 one-time).
+
+![CLV validation and concentration](figures/clv_validation.png)
+
+**The honest headline is the out-of-sample check, not the fit.** The window is split into a
+*calibration* period (through **2011-05-31**) and a later **183-day holdout** (to the last
+complete month, **2011-11-30**, so no absence in the partial final month is scored as a lost
+sale). BG/NBD is fit on calibration only, then asked how many transactions each of the
+**4,908** then-existing customers would make in the holdout. Measured against what actually
+happened:
+
+| calibration purchases | customers | predicted mean | actual mean |
+|---|---:|---:|---:|
+| 0 | 1,606 | 0.510 | 0.460 |
+| 1 | 883 | 0.781 | 0.717 |
+| 2 | 563 | 1.100 | 1.098 |
+| 3 | 407 | 1.320 | 1.285 |
+| 4 | 307 | 1.619 | 1.638 |
+| 5+ | 1,142 | 3.881 | 3.981 |
+
+In aggregate the model predicted **7,594 holdout transactions against an actual 7,562 — 0.4%
+over**, with a per-customer predicted-vs-actual correlation of **0.85** and a mean absolute
+error of **1.03 transactions**. That is a genuine forward prediction validated on data the
+fit never saw, and it tracks the real curve closely across every frequency bucket.
+
+**Fitted parameters (measured):** BG/NBD `r=0.669, α=63.87, a=0.110, b=2.433`; Gamma-Gamma
+`p=2.228, q=3.488, v=443.6`, implying an expected transaction value of **GBP 397** across the
+population. The predicted 180-day revenue over all identified customers totals **GBP
+4,508,842**, and it is **heavily concentrated: the top 10% of customers by predicted CLV
+carry 57.5% of it, the top 20% carry 71.2%** — the same wholesale-anchored concentration RFM
+and cohort both show, now expressed as forward pounds. The single highest-CLV customer
+(18102: 66 repeat purchases, ~GBP 8,800 per order) is predicted at about **GBP 127,000** of
+revenue over the next six months.
+
+**Caveats before anyone budgets against these numbers.** CLV here is **gross revenue, not
+profit** — this dataset carries no cost data, so no margin is modelled and none is invented.
+The horizon is finite (180 days) and **undiscounted**: it is a "next-six-months expected
+revenue", not an infinite-horizon discounted figure that would need a made-up discount rate.
+BG/NBD assumes Poisson purchasing with a beta-distributed dropout after each purchase, and
+Gamma-Gamma assumes value/frequency independence (checked above); both are approximations of
+a single UK gift-and-wholesale retailer, not laws. And as everywhere else, **identified
+customers only** — the 22.8% of rows without a `CustomerID` are structurally invisible. The
+full per-customer table (frequency, recency, T, P(alive), predicted purchases, predicted
+value, CLV) is written to `deliverables/customer_lifetime_value.csv` and the **CLV** sheet of
+the Excel workbook.
+
 ## Forecasting: honest, leakage-safe, MASE-scored
 
 Weekly revenue (104 complete weeks; the two partial edge weeks are dropped), rolling-origin
@@ -340,15 +409,17 @@ and, inside the pipeline, to the **DataQuality** sheet of the Excel workbook
 python -m retail --deliverables
 ```
 
-produces `deliverables/retail_analytics_executive.pdf` (6-page executive briefing: citation,
-cleaning-impact table, forecast + CV results, RFM, cohort retention, top SKUs),
+produces `deliverables/retail_analytics_executive.pdf` (7-page executive briefing: citation,
+cleaning-impact table, forecast + CV results, RFM, cohort retention, CLV, top SKUs),
 `deliverables/retail_analytics.xlsx` (sheets: CleaningReport, MonthlyRevenue, RFM, Cohort —
-the full cohort×month retention triangle with sizes and the size-weighted curve —
-ForecastCV, TopSKUs, Rules — all 1,222 association rules with metrics and the thin-support
-flag — DataQuality — the raw-vs-cleaned report card with per-dimension lift and the flat
-findings list — and WeeklyRevenue), and `deliverables/cohort_retention.csv` (the same
-triangle as a flat CSV). The basket, cohort and report-card steps run inside the pipeline,
-so every sheet is always current.
+the full cohort×month retention triangle with sizes and the size-weighted curve — CLV — the
+BG/NBD + Gamma-Gamma parameters, the out-of-sample holdout check and the top customers by
+predicted value — ForecastCV, TopSKUs, Rules — all 1,222 association rules with metrics and
+the thin-support flag — DataQuality — the raw-vs-cleaned report card with per-dimension lift
+and the flat findings list — and WeeklyRevenue), `deliverables/cohort_retention.csv` (the
+same triangle as a flat CSV) and `deliverables/customer_lifetime_value.csv` (the full
+per-customer CLV table). The basket, cohort, CLV and report-card steps run inside the
+pipeline, so every sheet is always current.
 
 ## Reproduce
 
@@ -358,7 +429,8 @@ python scripts/download_data.py    # one-time, ~45 MB from UCI
 python -m retail --deliverables    # full pipeline: ~1.5 min first run (xlsx parse), ~45 s after
 python -m retail --basket          # market-basket analysis only (skips politely if data absent)
 python -m retail --cohort          # cohort repeat-purchase retention only (skips politely if absent)
-pytest -q                          # 57 tests, fixture-based, no download needed
+python -m retail --clv             # customer lifetime value only (skips politely if absent)
+pytest -q                          # 81 tests, fixture-based, no download needed
 ruff check .
 ```
 
@@ -375,8 +447,11 @@ dataset; the one full-data test skips itself cleanly when `data/raw/` is absent.
   seasonal-naive is the strongest forecaster; two years of data cannot validate a
   second seasonal cycle.
 - **The final month is incomplete** (9 days of December 2011) and is annotated, not hidden.
-- **22.77% of rows have no CustomerID**, so RFM covers the 86.9% of revenue that is
-  attributable; the rest is structurally invisible to customer analytics.
+- **22.77% of rows have no CustomerID**, so RFM, cohort and CLV cover the 86.9% of revenue
+  that is attributable; the rest is structurally invisible to customer analytics.
+- **CLV is gross revenue, not profit** — no cost data exists, so no margin is modelled — and
+  it is a finite, undiscounted 180-day horizon, not an infinite-horizon discounted figure.
+  Its holdout error is 0.4% in aggregate, but that is one retailer over one 183-day window.
 - **Wholesale and retail orders are mixed** and not separable with certainty (many
   customers are wholesalers, hence 80k-unit orders).
 - Prices are nominal GBP; no inflation or FX adjustment.

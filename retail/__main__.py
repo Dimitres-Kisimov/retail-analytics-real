@@ -1,8 +1,9 @@
 """End-to-end pipeline entry point.
 
-    python -m retail --deliverables     # ingest -> clean -> EDA -> RFM -> cohort -> forecast -> basket -> PDF/Excel
+    python -m retail --deliverables     # ingest -> clean -> EDA -> RFM -> cohort -> CLV -> forecast -> basket -> PDF/Excel
     python -m retail --basket           # market-basket analysis only (top rules + figure)
     python -m retail --cohort           # cohort repeat-purchase retention only (triangle + SVG + CSV)
+    python -m retail --clv              # customer lifetime value only (BG/NBD + Gamma-Gamma + holdout check)
     python -m retail --quality          # just the raw-quality report
     python -m retail --report-card      # data-quality report card: raw vs cleaned (measured lift)
 
@@ -18,7 +19,7 @@ import time
 
 import pandas as pd
 
-from retail import basket, clean, cohort, eda, exports, forecast, ingest, paths, quality, rfm
+from retail import basket, clean, clv, cohort, eda, exports, forecast, ingest, paths, quality, rfm
 from retail.util import configure_stdout, fmt_int, fmt_pct
 
 MIN_DELIVERABLE_BYTES = 10_000
@@ -30,12 +31,12 @@ FIXTURE_SAMPLE = paths.ROOT / "tests" / "fixtures" / "sample.csv"
 def run_pipeline(force_reingest: bool = False) -> int:
     t0 = time.time()
 
-    print("[1/8] ingest: loading raw workbook (cached to data/interim/ after first run)")
+    print("[1/9] ingest: loading raw workbook (cached to data/interim/ after first run)")
     df = ingest.load_raw(force=force_reingest)
     raw_report = ingest.raw_quality_report(df)
     ingest.print_quality_report(raw_report)
 
-    print("[2/8] clean: documented pipeline")
+    print("[2/9] clean: documented pipeline")
     result = clean.clean(df)
     clean_table = result.report()
     print(clean_table.to_string(index=False))
@@ -49,16 +50,16 @@ def run_pipeline(force_reingest: bool = False) -> int:
     quality_after = quality.assess(sales, q_cfg, label="CLEANED sales")
     print(f"      quality {quality.compare(quality_before, quality_after)}")
 
-    print("[3/8] eda: writing figures/")
+    print("[3/9] eda: writing figures/")
     for fig_path in eda.make_all_figures(sales, returns):
         print(f"      [OK] {fig_path.name}")
 
-    print("[4/8] rfm: segmentation on identified customers")
+    print("[4/9] rfm: segmentation on identified customers")
     rfm_customers, rfm_summary = rfm.run_rfm(sales)
     print(f"      customers scored: {fmt_int(len(rfm_customers))}")
     print(rfm_summary.to_string(index=False))
 
-    print("[5/8] cohort: repeat-purchase retention by acquisition month")
+    print("[5/9] cohort: repeat-purchase retention by acquisition month")
     cohort_result = cohort.cohort_retention(sales)
     print(f"      identified customers in cohorts: {fmt_int(cohort_result.n_customers)} | "
           f"cohorts: {len(cohort_result.triangle)} | last complete month {cohort_result.last_complete_month}")
@@ -67,7 +68,15 @@ def run_pipeline(force_reingest: bool = False) -> int:
     csv_path = cohort.write_csv(cohort_result)
     print(f"      [OK] {svg_path.name} (committed figure) | {csv_path.name} (deliverable)")
 
-    print("[6/8] forecast: rolling-origin CV on weekly revenue")
+    print("[6/9] clv: predictive lifetime value (BG/NBD + Gamma-Gamma, out-of-sample check)")
+    clv_result = clv.run_clv(sales)
+    _print_clv_summary(clv_result)
+    clv_fig = clv.fig_clv(clv_result, out_dir=paths.FIGURES)
+    clv_csv = clv.write_csv(clv_result)
+    if clv_fig is not None:
+        print(f"      [OK] {clv_fig.name} (committed figure) | {clv_csv.name} (deliverable)")
+
+    print("[7/9] forecast: rolling-origin CV on weekly revenue")
     weekly = forecast.weekly_revenue(sales)
     cv = forecast.cross_validate(weekly)
     cv_summary = forecast.cv_summary(cv)
@@ -76,14 +85,14 @@ def run_pipeline(force_reingest: bool = False) -> int:
     final_fold = forecast.final_fold_forecast(weekly)
     sku_table = forecast.top_sku_forecasts(sales)
 
-    print("[7/8] basket: market-basket mining (Apriori + FP-growth cross-check)")
+    print("[8/9] basket: market-basket mining (Apriori + FP-growth cross-check)")
     basket_result = basket.run_basket_analysis(sales)
     _print_basket_summary(basket_result)
     fig_path = basket.fig_top_rules(basket_result.rules, out_dir=paths.FIGURES)
     if fig_path is not None:
         print(f"      [OK] {fig_path.name}")
 
-    print("[8/8] exports: PDF + Excel deliverables")
+    print("[9/9] exports: PDF + Excel deliverables")
     ctx = {
         "raw_report": raw_report,
         "clean_table": clean_table,
@@ -95,6 +104,7 @@ def run_pipeline(force_reingest: bool = False) -> int:
         "final_fold": final_fold,
         "rfm_summary": rfm_summary,
         "cohort_result": cohort_result,
+        "clv_result": clv_result,
         "sku_table": sku_table,
         "rules_table": basket.rules_table(basket_result.rules),
         "quality_before": quality_before,
@@ -170,6 +180,68 @@ def _print_basket_summary(result) -> None:
         print(basket.rules_table(result.rules, top=10).to_string(index=False))
     else:
         print("      no rules survived the thresholds on this input")
+
+
+def _print_clv_summary(result) -> None:
+    """ASCII summary of the CLV run: fit params, concentration, out-of-sample check."""
+    b, g = result.bgnbd, result.gamma_gamma
+    conc = result.concentration(0.10)
+    print(
+        f"      customers {fmt_int(result.n_customers)} "
+        f"({fmt_int(result.n_repeat)} repeat) | horizon {result.horizon_days} days"
+    )
+    print(
+        f"      BG/NBD  r={b.r:.4f} alpha={b.alpha:.3f} a={b.a:.4f} b={b.b:.4f} "
+        f"(converged={b.converged})"
+    )
+    print(
+        f"      Gamma-Gamma p={g.p:.4f} q={g.q:.4f} v={g.v:.2f} | "
+        f"pop. mean value GBP {g.population_mean():,.2f} | "
+        f"freq-value corr {g.freq_value_corr:+.3f} (assumption check)"
+    )
+    print(
+        f"      predicted {result.horizon_days}-day revenue GBP {conc['total_clv']:,.0f} | "
+        f"top 10% of customers hold {fmt_pct(conc['top_share'], 1)}"
+    )
+    v = result.validation
+    if v is not None and v.actual_total:
+        marker = "[OK]" if 0.8 <= v.ratio <= 1.2 else "[WARN]"
+        print(
+            f"      {marker} out-of-sample holdout ({v.holdout_days} days, "
+            f"{fmt_int(v.n_customers)} customers): predicted {v.predicted_total:,.0f} vs "
+            f"actual {fmt_int(v.actual_total)} transactions "
+            f"({v.ratio:.3f}x), correlation {v.correlation:.2f}, per-customer MAE {v.mae:.3f}"
+        )
+        print("      predicted vs actual holdout transactions by calibration frequency:")
+        print(v.by_frequency.to_string(index=False))
+    print(f"      [HEADLINE] {clv.headline_text(result)}")
+
+
+def run_clv(force_reingest: bool = False) -> int:
+    """Standalone CLV run: BG/NBD + Gamma-Gamma fit, holdout check, figure + CSV."""
+    try:
+        df = ingest.load_raw(force=force_reingest)
+    except FileNotFoundError:
+        print(
+            "[SKIP] raw data not found - run `python scripts/download_data.py` first "
+            "(the dataset is deliberately not committed)."
+        )
+        return 0
+    print("[1/3] clean: documented pipeline")
+    sales = clean.clean(df).sales
+    print(f"      sales rows {fmt_int(len(sales))}")
+    print("[2/3] clv: BG/NBD (frequency) x Gamma-Gamma (value), out-of-sample validated")
+    result = clv.run_clv(sales)
+    _print_clv_summary(result)
+    print("      top 10 customers by predicted CLV:")
+    print(clv.clv_summary_table(result, top=10).to_string(index=False))
+    print("[3/3] outputs: figures/clv_validation.png + deliverables/customer_lifetime_value.csv")
+    fig_path = clv.fig_clv(result, out_dir=paths.FIGURES)
+    csv_path = clv.write_csv(result, out_dir=paths.DELIVERABLES)
+    if fig_path is not None:
+        print(f"      [OK] {fig_path.name} ({fig_path.stat().st_size / 1024:.1f} KB, committed)")
+    print(f"      [OK] {csv_path.name} ({csv_path.stat().st_size / 1024:.1f} KB, deliverable)")
+    return 0
 
 
 def run_basket(force_reingest: bool = False) -> int:
@@ -338,6 +410,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--basket", action="store_true", help="market-basket analysis: top co-purchase rules + figure")
     parser.add_argument("--cohort", action="store_true",
                         help="cohort repeat-purchase retention: triangle + SVG heatmap/curve + CSV")
+    parser.add_argument("--clv", action="store_true",
+                        help="customer lifetime value: BG/NBD + Gamma-Gamma, out-of-sample holdout check, figure + CSV")
     parser.add_argument("--quality", action="store_true", help="print the raw-quality report only")
     parser.add_argument("--report-card", action="store_true",
                         help="data-quality report card: score raw vs cleaned and report the lift")
@@ -350,6 +424,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_basket(force_reingest=args.force_reingest)
     if args.cohort:
         return run_cohort(force_reingest=args.force_reingest)
+    if args.clv:
+        return run_clv(force_reingest=args.force_reingest)
     if args.quality:
         report = ingest.raw_quality_report(ingest.load_raw(force=args.force_reingest))
         ingest.print_quality_report(report)

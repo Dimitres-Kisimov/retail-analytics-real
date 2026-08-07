@@ -191,6 +191,85 @@ def _cohort_page(pp: PdfPages, ctx: dict) -> None:
     plt.close(fig)
 
 
+def _clv_page(pp: PdfPages, ctx: dict) -> None:
+    """CLV page: out-of-sample validation bars + concentration Lorenz + params/headline."""
+    from retail import clv
+
+    result = ctx.get("clv_result")
+    if result is None or result.clv_table.empty:
+        return
+    _style()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 8.5))
+
+    v = result.validation
+    if v is not None and not v.by_frequency.empty:
+        bf = v.by_frequency
+        idx = np.arange(len(bf))
+        w = 0.4
+        ax1.bar(idx - w / 2, bf["actual_mean"], width=w, color=BLUE, label="actual")
+        ax1.bar(idx + w / 2, bf["predicted_mean"], width=w, color=CATEGORICAL[1], label="predicted")
+        ax1.set_xticks(idx)
+        ax1.set_xticklabels(bf["cal_frequency"])
+        ax1.set_xlabel("purchases in calibration period")
+        ax1.set_ylabel("mean transactions in holdout")
+        ax1.grid(axis="x", visible=False)
+        ax1.legend(frameon=False, fontsize=9)
+        ax1.set_title("Out-of-sample check (predicted vs actual)", fontsize=11)
+
+    cum_x, cum_y = clv.lorenz_points(result.clv_table["clv"].to_numpy())
+    ax2.plot(100 * cum_x, 100 * cum_y, color=BLUE, linewidth=2)
+    ax2.plot([0, 100], [0, 100], color=MUTED, linewidth=1, linestyle="--")
+    ax2.set_xlabel("share of customers (%, lowest CLV first)")
+    ax2.set_ylabel("share of predicted CLV (%)")
+    ax2.grid(axis="x", visible=False)
+    ax2.set_title(f"Predicted {result.horizon_days}-day CLV concentration", fontsize=11)
+
+    b, g = result.bgnbd, result.gamma_gamma
+    conc = result.concentration(0.10)
+    lines = [
+        "Customer lifetime value - BG/NBD (frequency) x Gamma-Gamma (value), from scratch.",
+        f"BG/NBD  r={b.r:.4f}  alpha={b.alpha:.3f}  a={b.a:.4f}  b={b.b:.4f}",
+        f"Gamma-Gamma  p={g.p:.4f}  q={g.q:.4f}  v={g.v:.2f}   pop. mean value GBP "
+        f"{g.population_mean():,.0f}   freq-value corr {g.freq_value_corr:+.3f}",
+        f"{result.n_customers:,} identified customers ({result.n_repeat:,} repeat); predicted "
+        f"{result.horizon_days}-day revenue GBP {conc['total_clv']:,.0f}, top 10% hold "
+        f"{100 * conc['top_share']:.1f}%.",
+    ]
+    if v is not None and v.actual_total:
+        lines.append(
+            f"Holdout ({v.holdout_days} days, {v.n_customers:,} customers): predicted "
+            f"{v.predicted_total:,.0f} vs actual {v.actual_total:,} transactions "
+            f"({v.ratio:.3f}x), correlation {v.correlation:.2f}."
+        )
+    lines.append(
+        "Gross revenue, not margin (no cost data); finite undiscounted horizon; "
+        "identified customers only."
+    )
+    fig.text(0.07, 0.40, "\n".join(lines), fontsize=9.5, color=INK_2, va="top", family="monospace")
+
+    top = clv.clv_summary_table(result, top=8).copy()
+    top["monetary_value"] = top["monetary_value"].round(0)
+    tbl_ax = fig.add_axes((0.07, 0.06, 0.86, 0.24))
+    tbl_ax.axis("off")
+    table = tbl_ax.table(
+        cellText=[[_clip(v) for v in row] for row in top.itertuples(index=False)],
+        colLabels=list(top.columns), loc="center", cellLoc="center",
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(7.5)
+    table.scale(1.0, 1.3)
+    for (row, _col), cell in table.get_celld().items():
+        cell.set_edgecolor(GRID)
+        if row == 0:
+            cell.set_text_props(fontweight="bold", color=INK)
+            cell.set_facecolor(SURFACE)
+
+    fig.suptitle("Predictive customer lifetime value", fontsize=16, x=0.07, ha="left", color=INK)
+    fig.subplots_adjust(top=0.90, bottom=0.55, left=0.09, right=0.95, wspace=0.28)
+    pp.savefig(fig)
+    plt.close(fig)
+
+
 def export_pdf(ctx: dict, path: Path | None = None) -> Path:
     path = path or DELIVERABLES / PDF_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -238,6 +317,7 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
         _forecast_page(pp, ctx)
         _rfm_page(pp, ctx)
         _cohort_page(pp, ctx)
+        _clv_page(pp, ctx)
         sku = ctx["sku_table"].copy()
         sku["Description"] = sku["Description"].astype(str).str.slice(0, 30)
         sku.columns = ["SKU", "Description", "Units", "Weeks", "Zero-wk share",
@@ -306,6 +386,71 @@ def _write_cohort_sheet(writer, ctx: dict) -> None:
     curve.to_excel(writer, sheet_name=sheet, index=False, startrow=row)
 
 
+def _write_clv_sheet(writer, ctx: dict) -> None:
+    """Customer-lifetime-value sheet: fit params, out-of-sample check, top customers."""
+    result = ctx.get("clv_result")
+    if result is None or result.clv_table.empty:
+        return
+    from retail import clv
+
+    sheet = "CLV"
+    b, g = result.bgnbd, result.gamma_gamma
+    conc = result.concentration(0.10)
+    header = pd.DataFrame(
+        {
+            "Customer lifetime value - BG/NBD (frequency) x Gamma-Gamma (value); "
+            "predicted GROSS revenue over the horizon, identified customers only": [
+                f"horizon {result.horizon_days} days | customers {result.n_customers:,} "
+                f"({result.n_repeat:,} repeat) | total predicted revenue GBP "
+                f"{conc['total_clv']:,.0f} | top 10% of customers = "
+                f"{100 * conc['top_share']:.1f}% of it"
+            ]
+        }
+    )
+    header.to_excel(writer, sheet_name=sheet, index=False, startrow=0)
+
+    params = pd.DataFrame(
+        {
+            "quantity": [
+                "BG/NBD r", "BG/NBD alpha", "BG/NBD a", "BG/NBD b",
+                "Gamma-Gamma p", "Gamma-Gamma q", "Gamma-Gamma v",
+                "population mean value (GBP)", "frequency-value correlation",
+            ],
+            "value": [
+                round(b.r, 5), round(b.alpha, 4), round(b.a, 5), round(b.b, 5),
+                round(g.p, 5), round(g.q, 5), round(g.v, 4),
+                round(g.population_mean(), 2), round(g.freq_value_corr, 4),
+            ],
+        }
+    )
+    params.to_excel(writer, sheet_name=sheet, index=False, startrow=3)
+    row = 3 + len(params) + 3
+
+    v = result.validation
+    if v is not None:
+        val = pd.DataFrame(
+            {
+                "out_of_sample_holdout": [
+                    "calibration end", "holdout end", "holdout days", "customers",
+                    "predicted transactions", "actual transactions", "ratio (pred/actual)",
+                    "predicted-vs-actual correlation", "per-customer MAE",
+                ],
+                "value": [
+                    v.calibration_end.date().isoformat(), v.holdout_end.date().isoformat(),
+                    v.holdout_days, v.n_customers, round(v.predicted_total, 1), v.actual_total,
+                    round(v.ratio, 4), round(v.correlation, 4), round(v.mae, 4),
+                ],
+            }
+        )
+        val.to_excel(writer, sheet_name=sheet, index=False, startrow=row)
+        row += len(val) + 3
+        v.by_frequency.to_excel(writer, sheet_name=sheet, index=False, startrow=row)
+        row += len(v.by_frequency) + 3
+
+    top = clv.clv_summary_table(result, top=50)
+    top.to_excel(writer, sheet_name=sheet, index=False, startrow=row)
+
+
 def export_excel(ctx: dict, path: Path | None = None) -> Path:
     path = path or DELIVERABLES / XLSX_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -316,6 +461,7 @@ def export_excel(ctx: dict, path: Path | None = None) -> Path:
         monthly.to_excel(writer, sheet_name="MonthlyRevenue", index=False)
         ctx["rfm_summary"].to_excel(writer, sheet_name="RFM", index=False)
         _write_cohort_sheet(writer, ctx)
+        _write_clv_sheet(writer, ctx)
         ctx["cv"].to_excel(writer, sheet_name="ForecastCV", index=False)
         ctx["cv_summary"].to_excel(writer, sheet_name="ForecastCV", index=False, startrow=len(ctx["cv"]) + 3)
         ctx["sku_table"].to_excel(writer, sheet_name="TopSKUs", index=False)
