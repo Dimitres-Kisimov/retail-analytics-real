@@ -270,6 +270,42 @@ def _clv_page(pp: PdfPages, ctx: dict) -> None:
     plt.close(fig)
 
 
+def _returns_page(pp: PdfPages, ctx: dict) -> None:
+    """Returns & cancellations: headline rates + reverse-logistics lag + top returned SKUs."""
+    result = ctx.get("returns_result")
+    if result is None or result.by_sku.empty:
+        return
+    o, m, c = result.overview, result.match, result.concentration
+    top = result.by_sku.head(12).copy()
+    top["Description"] = top["Description"].astype(str).str.slice(0, 30)
+    top["returned_value"] = top["returned_value"].round(0)
+    top["value_return_rate"] = (100.0 * top["value_return_rate"]).round(1)
+    top = top[["StockCode", "Description", "returned_units", "returned_value", "value_return_rate"]]
+    top.columns = ["SKU", "Description", "Ret. units", "Ret. value (GBP)", "Value return rate %"]
+    lag_line = ""
+    if m.get("matched_lines"):
+        lag_line = (f"Reverse-logistics lag: {100 * m['matched_value_share']:.1f}% of returned value "
+                    f"matches a prior same-customer, same-SKU purchase; median "
+                    f"{m['median_lag_days']:.0f} days to return (p25 {m['p25_lag_days']:.0f}, "
+                    f"p75 {m['p75_lag_days']:.0f}). Matching is a heuristic, not a linked RMA.")
+    note = (
+        f"Gross GBP {o['gross_value']:,.0f}  ->  returned GBP {o['returned_value']:,.0f}  "
+        f"->  net GBP {o['net_value']:,.0f}.   Return rate {100 * o['value_return_rate']:.2f}% of value, "
+        f"{100 * o['unit_return_rate']:.2f}% of units.\n"
+        f"{o['return_lines']:,} return lines across {o['cancellation_invoices']:,} cancellation invoices; "
+        f"top {c['top_n']} SKUs carry {100 * c['top_n_share']:.1f}% of returned value.\n"
+        f"{lag_line}\n"
+        "Measured on real cancellation invoices (UCI Online Retail II, CC BY 4.0). A monthly rate can "
+        "exceed 100% when a credit note posts in a quieter month than its sale."
+    )
+    _table_page(
+        pp, top,
+        "Returns & cancellations - top returned SKUs by value",
+        note=note,
+        col_widths=[0.09, 0.34, 0.12, 0.16, 0.18],
+    )
+
+
 def export_pdf(ctx: dict, path: Path | None = None) -> Path:
     path = path or DELIVERABLES / PDF_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -318,6 +354,7 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
         _rfm_page(pp, ctx)
         _cohort_page(pp, ctx)
         _clv_page(pp, ctx)
+        _returns_page(pp, ctx)
         sku = ctx["sku_table"].copy()
         sku["Description"] = sku["Description"].astype(str).str.slice(0, 30)
         sku.columns = ["SKU", "Description", "Units", "Weeks", "Zero-wk share",
@@ -451,6 +488,56 @@ def _write_clv_sheet(writer, ctx: dict) -> None:
     top.to_excel(writer, sheet_name=sheet, index=False, startrow=row)
 
 
+def _write_returns_sheet(writer, ctx: dict) -> None:
+    """Returns analysis: headline metrics, matching/lag, per-SKU table, monthly net (screen == export)."""
+    from retail import returns as returns_mod
+
+    result = ctx.get("returns_result")
+    if result is None or result.by_sku.empty:
+        return
+    sheet = "Returns"
+    o, m, c = result.overview, result.match, result.concentration
+    header = pd.DataFrame(
+        {"Returns & cancellations - measured on real C-invoices; returned value/units as a share of gross": [
+            f"return rate {100 * o['value_return_rate']:.2f}% of value / {100 * o['unit_return_rate']:.2f}% "
+            f"of units | net GBP {o['net_value']:,.0f} of {o['gross_value']:,.0f} | "
+            f"{m['matched_value_share'] * 100:.1f}% of returned value matched to a prior purchase"
+        ]}
+    )
+    header.to_excel(writer, sheet_name=sheet, index=False, startrow=0)
+
+    metrics = pd.DataFrame(
+        {
+            "metric": [
+                "gross value (GBP)", "returned value (GBP)", "net value (GBP)",
+                "value return rate %", "unit return rate %",
+                "return lines", "cancellation invoices", "returned SKUs",
+                "top-N SKU share of returned value %", "SKUs to cover 80% of returns",
+                "matched value share %", "matched lines", "median days to return",
+            ],
+            "value": [
+                round(o["gross_value"], 2), round(o["returned_value"], 2), round(o["net_value"], 2),
+                round(100 * o["value_return_rate"], 2), round(100 * o["unit_return_rate"], 2),
+                o["return_lines"], o["cancellation_invoices"], c["n_returned_skus"],
+                round(100 * c["top_n_share"], 1), c["skus_to_80pct"],
+                round(100 * m["matched_value_share"], 1), m["matched_lines"],
+                (round(m["median_lag_days"], 1) if m.get("matched_lines") else "n/a"),
+            ],
+        }
+    )
+    metrics.to_excel(writer, sheet_name=sheet, index=False, startrow=3)
+    row = 3 + len(metrics) + 2
+
+    lag = result.lag.copy()
+    lag["returned_value"] = lag["returned_value"].round(2)
+    lag["line_share_pct"] = (100.0 * lag["line_share"]).round(2)
+    lag = lag[["lag_bucket", "lines", "returned_value", "line_share_pct"]]
+    lag.to_excel(writer, sheet_name=sheet, index=False, startrow=row)
+    row += len(lag) + 2
+
+    returns_mod.sku_export_frame(result).to_excel(writer, sheet_name=sheet, index=False, startrow=row)
+
+
 def export_excel(ctx: dict, path: Path | None = None) -> Path:
     path = path or DELIVERABLES / XLSX_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -462,6 +549,7 @@ def export_excel(ctx: dict, path: Path | None = None) -> Path:
         ctx["rfm_summary"].to_excel(writer, sheet_name="RFM", index=False)
         _write_cohort_sheet(writer, ctx)
         _write_clv_sheet(writer, ctx)
+        _write_returns_sheet(writer, ctx)
         ctx["cv"].to_excel(writer, sheet_name="ForecastCV", index=False)
         ctx["cv_summary"].to_excel(writer, sheet_name="ForecastCV", index=False, startrow=len(ctx["cv"]) + 3)
         ctx["sku_table"].to_excel(writer, sheet_name="TopSKUs", index=False)

@@ -348,6 +348,67 @@ assortment*, not of all invoices. Above all: lift is co-purchase frequency versu
 independence — **correlation, not causation**. Nothing here proves that stocking blue
 cutlery *makes* anyone buy pink cutlery.
 
+## Returns & cancellations
+
+```bash
+python -m retail --returns     # return rates + reverse-logistics lag + per-SKU CSV/figure
+```
+
+The cleaning pipeline never throws cancellations away — it *separates* the `C`-prefixed
+invoices into a first-class **returns frame** (17,914 product rows). This is the analysis
+that frame was kept for: returns measured against sales, from scratch, on the same cleaned
+data everything else uses.
+
+![Returns analysis](figures/returns_analysis.png)
+
+**Headline (measured):** returns run at **3.65% of gross value** (GBP 716,426 of GBP
+19,643,862 — leaving **GBP 18,927,436 net**) and **4.18% of units**, across **17,914 return
+lines in 7,405 cancellation invoices**.
+
+**Reverse-logistics lag — matching credit notes to their sale.** Online Retail II credit
+notes carry *no reference* to the invoice they cancel, so a return is attributed to a sale
+**heuristically**: the most recent prior sale of the **same StockCode to the same
+CustomerID**, on or before the cancellation date (a backward as-of join). On that basis
+**95.0% of returned value** (89.6% of lines, 16,056 of 17,914) matches a prior purchase, at
+a **median of 10 days to return** (p25 4 days, p75 30 days; the mean of 31.6 is pulled up by
+a thin long tail). The distribution:
+
+| time from purchase to return | same day | 1–7 days | 8–30 days | 31–90 days | 91–365 days | > 365 days |
+|---|---:|---:|---:|---:|---:|---:|
+| share of matched return lines | 10.9% | 31.0% | 33.3% | 15.7% | 8.5% | 0.6% |
+
+Three-quarters of returns come back within a month; a small tail (0.6%) is a year or more
+later — consistent with wholesale restock corrections, not consumer buyer's-remorse.
+
+**Which products come back.** Returned value is concentrated: the **top 10 SKUs carry 42.9%**
+of it and **313 SKUs cover 80%** (of 2,885 SKUs ever returned). The top of that table is
+dominated by the two known giant same-day cancellations — the same footnote the "top
+products" chart carries:
+
+| # | SKU | product | units returned | value-return rate |
+|---|---|---|---:|---:|
+| 1 | 23843 | PAPER CRAFT, LITTLE BIRDIE | 80,995 | **100%** |
+| 2 | 23166 | MEDIUM CERAMIC TOP STORAGE JAR | 74,494 | **94.8%** |
+| 3 | 22423 | REGENCY CAKESTAND 3 TIER | 1,450 | 5.0% |
+
+SKU 23843 is the 80,995-unit order placed and cancelled on the same day (2011-12-09): the
+returns analysis surfaces it correctly at a 100% return rate, a check that the matching and
+rates are reading the real data, not smoothing it. Return rates also vary by market — France
+**5.68%**, the UK **3.76%**, EIRE **3.26%**, Germany **2.27%**, versus the Netherlands
+**0.67%** and Australia **0.90%**.
+
+**Caveats.** Matching is a **heuristic attribution, not a linked RMA** — the data has no key
+from a credit note to its originating invoice; 328 return lines carry no `CustomerID` and
+can't be attributed to a buyer, and ~1,500 identified lines find no prior same-SKU sale (the
+sale predates the window, or sits under a different/blank id). Those are reported as
+unmatched, never forced onto a sale. The return rate is `returned / gross` over the **same
+cleaned universe** — it is *not* a per-order refund probability, and because a credit note
+can post in a quieter (or truncated) month than its sale, the *monthly* rate can exceed 100%;
+that is a timing artefact, annotated in the EDA chart, not hidden. As everywhere, single UK
+gift/wholesale retailer — **correlation, not causation**. The full per-SKU table (sold vs
+returned units and value, with both return rates) is written to
+`deliverables/returns_analysis.csv` and the **Returns** sheet of the Excel workbook.
+
 ## Data-quality report card
 
 ```bash
@@ -409,17 +470,19 @@ and, inside the pipeline, to the **DataQuality** sheet of the Excel workbook
 python -m retail --deliverables
 ```
 
-produces `deliverables/retail_analytics_executive.pdf` (7-page executive briefing: citation,
-cleaning-impact table, forecast + CV results, RFM, cohort retention, CLV, top SKUs),
+produces `deliverables/retail_analytics_executive.pdf` (executive briefing: citation,
+cleaning-impact table, forecast + CV results, RFM, cohort retention, CLV, returns, top SKUs),
 `deliverables/retail_analytics.xlsx` (sheets: CleaningReport, MonthlyRevenue, RFM, Cohort —
 the full cohort×month retention triangle with sizes and the size-weighted curve — CLV — the
 BG/NBD + Gamma-Gamma parameters, the out-of-sample holdout check and the top customers by
-predicted value — ForecastCV, TopSKUs, Rules — all 1,222 association rules with metrics and
-the thin-support flag — DataQuality — the raw-vs-cleaned report card with per-dimension lift
-and the flat findings list — and WeeklyRevenue), `deliverables/cohort_retention.csv` (the
-same triangle as a flat CSV) and `deliverables/customer_lifetime_value.csv` (the full
-per-customer CLV table). The basket, cohort, CLV and report-card steps run inside the
-pipeline, so every sheet is always current.
+predicted value — Returns — the headline rates, reverse-logistics lag buckets and the full
+per-SKU sold-vs-returned table — ForecastCV, TopSKUs, Rules — all 1,222 association rules with
+metrics and the thin-support flag — DataQuality — the raw-vs-cleaned report card with
+per-dimension lift and the flat findings list — and WeeklyRevenue),
+`deliverables/cohort_retention.csv` (the same triangle as a flat CSV),
+`deliverables/customer_lifetime_value.csv` (the full per-customer CLV table) and
+`deliverables/returns_analysis.csv` (the full per-SKU returns table). The basket, cohort,
+CLV, returns and report-card steps run inside the pipeline, so every sheet is always current.
 
 ## Reproduce
 
@@ -430,7 +493,8 @@ python -m retail --deliverables    # full pipeline: ~1.5 min first run (xlsx par
 python -m retail --basket          # market-basket analysis only (skips politely if data absent)
 python -m retail --cohort          # cohort repeat-purchase retention only (skips politely if absent)
 python -m retail --clv             # customer lifetime value only (skips politely if absent)
-pytest -q                          # 81 tests, fixture-based, no download needed
+python -m retail --returns         # returns & cancellations analysis only (skips politely if absent)
+pytest -q                          # 97 tests, fixture-based, no download needed
 ruff check .
 ```
 
