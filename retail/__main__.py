@@ -1,8 +1,9 @@
 """End-to-end pipeline entry point.
 
-    python -m retail --deliverables     # ingest -> clean -> EDA -> returns -> RFM -> cohort -> CLV -> forecast -> basket -> PDF/Excel
+    python -m retail --deliverables     # ingest -> clean -> EDA -> returns -> RFM -> cohort -> lifecycle -> CLV -> forecast -> basket -> PDF/Excel
     python -m retail --basket           # market-basket analysis only (top rules + figure)
     python -m retail --cohort           # cohort repeat-purchase retention only (triangle + SVG + CSV)
+    python -m retail --lifecycle        # lifecycle stages & growth accounting (monthly flows + SVG + CSVs)
     python -m retail --clv              # customer lifetime value only (BG/NBD + Gamma-Gamma + holdout check)
     python -m retail --returns          # returns & cancellations analysis only (rates, lag, per-SKU CSV)
     python -m retail --quality          # just the raw-quality report
@@ -20,7 +21,20 @@ import time
 
 import pandas as pd
 
-from retail import basket, clean, clv, cohort, eda, exports, forecast, ingest, paths, quality, rfm
+from retail import (
+    basket,
+    clean,
+    clv,
+    cohort,
+    eda,
+    exports,
+    forecast,
+    ingest,
+    lifecycle,
+    paths,
+    quality,
+    rfm,
+)
 from retail import returns as returns_mod
 from retail.util import configure_stdout, fmt_int, fmt_pct
 
@@ -33,12 +47,12 @@ FIXTURE_SAMPLE = paths.ROOT / "tests" / "fixtures" / "sample.csv"
 def run_pipeline(force_reingest: bool = False) -> int:
     t0 = time.time()
 
-    print("[1/10] ingest: loading raw workbook (cached to data/interim/ after first run)")
+    print("[1/11] ingest: loading raw workbook (cached to data/interim/ after first run)")
     df = ingest.load_raw(force=force_reingest)
     raw_report = ingest.raw_quality_report(df)
     ingest.print_quality_report(raw_report)
 
-    print("[2/10] clean: documented pipeline")
+    print("[2/11] clean: documented pipeline")
     result = clean.clean(df)
     clean_table = result.report()
     print(clean_table.to_string(index=False))
@@ -52,11 +66,11 @@ def run_pipeline(force_reingest: bool = False) -> int:
     quality_after = quality.assess(sales, q_cfg, label="CLEANED sales")
     print(f"      quality {quality.compare(quality_before, quality_after)}")
 
-    print("[3/10] eda: writing figures/")
+    print("[3/11] eda: writing figures/")
     for fig_path in eda.make_all_figures(sales, returns_frame):
         print(f"      [OK] {fig_path.name}")
 
-    print("[4/10] returns: cancellations analysis (return rates, reverse-logistics lag, per-SKU)")
+    print("[4/11] returns: cancellations analysis (return rates, reverse-logistics lag, per-SKU)")
     returns_result = returns_mod.run_returns_analysis(sales, returns_frame)
     _print_returns_summary(returns_result)
     returns_fig = returns_mod.fig_returns(returns_result, out_dir=paths.FIGURES)
@@ -64,12 +78,12 @@ def run_pipeline(force_reingest: bool = False) -> int:
     if returns_fig is not None:
         print(f"      [OK] {returns_fig.name} (committed figure) | {returns_csv.name} (deliverable)")
 
-    print("[5/10] rfm: segmentation on identified customers")
+    print("[5/11] rfm: segmentation on identified customers")
     rfm_customers, rfm_summary = rfm.run_rfm(sales)
     print(f"      customers scored: {fmt_int(len(rfm_customers))}")
     print(rfm_summary.to_string(index=False))
 
-    print("[6/10] cohort: repeat-purchase retention by acquisition month")
+    print("[6/11] cohort: repeat-purchase retention by acquisition month")
     cohort_result = cohort.cohort_retention(sales)
     print(f"      identified customers in cohorts: {fmt_int(cohort_result.n_customers)} | "
           f"cohorts: {len(cohort_result.triangle)} | last complete month {cohort_result.last_complete_month}")
@@ -78,7 +92,15 @@ def run_pipeline(force_reingest: bool = False) -> int:
     csv_path = cohort.write_csv(cohort_result)
     print(f"      [OK] {svg_path.name} (committed figure) | {csv_path.name} (deliverable)")
 
-    print("[7/10] clv: predictive lifetime value (BG/NBD + Gamma-Gamma, out-of-sample check)")
+    print("[7/11] lifecycle: stages & growth accounting (monthly flows, quick ratio)")
+    lifecycle_result = lifecycle.lifecycle_states(sales)
+    _print_lifecycle_summary(lifecycle_result)
+    lc_svg = lifecycle.write_svg(lifecycle_result)
+    lc_monthly_csv, lc_flows_csv = lifecycle.write_csv(lifecycle_result)
+    print(f"      [OK] {lc_svg.name} (committed figure) | {lc_monthly_csv.name} + "
+          f"{lc_flows_csv.name} (deliverables)")
+
+    print("[8/11] clv: predictive lifetime value (BG/NBD + Gamma-Gamma, out-of-sample check)")
     clv_result = clv.run_clv(sales)
     _print_clv_summary(clv_result)
     clv_fig = clv.fig_clv(clv_result, out_dir=paths.FIGURES)
@@ -86,7 +108,7 @@ def run_pipeline(force_reingest: bool = False) -> int:
     if clv_fig is not None:
         print(f"      [OK] {clv_fig.name} (committed figure) | {clv_csv.name} (deliverable)")
 
-    print("[8/10] forecast: rolling-origin CV on weekly revenue")
+    print("[9/11] forecast: rolling-origin CV on weekly revenue")
     weekly = forecast.weekly_revenue(sales)
     cv = forecast.cross_validate(weekly)
     cv_summary = forecast.cv_summary(cv)
@@ -95,14 +117,14 @@ def run_pipeline(force_reingest: bool = False) -> int:
     final_fold = forecast.final_fold_forecast(weekly)
     sku_table = forecast.top_sku_forecasts(sales)
 
-    print("[9/10] basket: market-basket mining (Apriori + FP-growth cross-check)")
+    print("[10/11] basket: market-basket mining (Apriori + FP-growth cross-check)")
     basket_result = basket.run_basket_analysis(sales)
     _print_basket_summary(basket_result)
     fig_path = basket.fig_top_rules(basket_result.rules, out_dir=paths.FIGURES)
     if fig_path is not None:
         print(f"      [OK] {fig_path.name}")
 
-    print("[10/10] exports: PDF + Excel deliverables")
+    print("[11/11] exports: PDF + Excel deliverables")
     ctx = {
         "raw_report": raw_report,
         "clean_table": clean_table,
@@ -115,6 +137,7 @@ def run_pipeline(force_reingest: bool = False) -> int:
         "final_fold": final_fold,
         "rfm_summary": rfm_summary,
         "cohort_result": cohort_result,
+        "lifecycle_result": lifecycle_result,
         "clv_result": clv_result,
         "sku_table": sku_table,
         "rules_table": basket.rules_table(basket_result.rules),
@@ -226,6 +249,41 @@ def _print_clv_summary(result) -> None:
         print("      predicted vs actual holdout transactions by calibration frequency:")
         print(v.by_frequency.to_string(index=False))
     print(f"      [HEADLINE] {clv.headline_text(result)}")
+
+
+def _print_lifecycle_summary(result) -> None:
+    """ASCII summary of the lifecycle run: coverage, threshold audit, flows, headline."""
+    cfg = result.config
+    print(
+        f"      identified customers in complete months: {fmt_int(result.n_customers)} | "
+        f"months scored: {len(result.monthly)} (through {result.last_complete_month})"
+        + (f" | {fmt_int(result.n_excluded_partial)} customers first seen in the partial "
+           f"final month excluded" if result.n_excluded_partial else "")
+    )
+    g = result.gap_stats
+    if g:
+        print(
+            f"      comeback-gap audit for the dormancy threshold ({cfg.dormancy_months} months): "
+            f"median gap {g['p50']:.0f}, p75 {g['p75']:.0f}, p90 {g['p90']:.0f} months; "
+            f"{fmt_pct(g['share_within_dormancy'], 1)} of comebacks within the threshold"
+        )
+    if not result.monthly.empty:
+        tail = result.monthly.tail(6).copy()
+        tail["quick_ratio"] = tail["quick_ratio"].round(2)
+        cols = ["month", "new", "retained", "resurrected", "active", "churned",
+                "quick_ratio", "at_risk", "dormant", "base"]
+        print("      last 6 complete months:")
+        print(tail[cols].to_string(index=False))
+    if not result.flows.empty:
+        res_in = result.flows.loc[["at_risk", "dormant"], "resurrected"]
+        total_res = int(result.flows["resurrected"].sum())
+        if total_res:
+            deep = int(res_in.get("dormant", 0))
+            print(
+                f"      dormant is not dead: {fmt_int(deep)} of {fmt_int(total_res)} resurrections "
+                f"({fmt_pct(deep / total_res, 1)}) come back from >{cfg.dormancy_months} months of silence"
+            )
+    print(f"      [HEADLINE] {lifecycle.headline_text(result)}")
 
 
 def _print_returns_summary(result) -> None:
@@ -342,6 +400,35 @@ def run_basket(force_reingest: bool = False) -> int:
         print("      [WARN] no solid rules to plot (all thin-support or none mined)")
     else:
         print(f"      [OK] {fig_path.name}")
+    return 0
+
+
+def run_lifecycle(force_reingest: bool = False) -> int:
+    """Standalone lifecycle run: monthly stages + flow matrix + committed SVG + CSVs."""
+    try:
+        df = ingest.load_raw(force=force_reingest)
+    except FileNotFoundError:
+        print(
+            "[SKIP] raw data not found - run `python scripts/download_data.py` first "
+            "(the dataset is deliberately not committed)."
+        )
+        return 0
+    print("[1/3] clean: documented pipeline")
+    sales = clean.clean(df).sales
+    print(f"      sales rows {fmt_int(len(sales))}")
+    print("[2/3] lifecycle: monthly stages, growth accounting, month-to-month flow matrix")
+    result = lifecycle.lifecycle_states(sales)
+    _print_lifecycle_summary(result)
+    if not result.flows.empty:
+        print("      aggregate month-to-month flow matrix (customers, all complete month pairs):")
+        print(lifecycle.flow_frame(result).to_string(index=False))
+    print("[3/3] outputs: figures/lifecycle_stages.svg + deliverables/lifecycle_stages.csv"
+          " + lifecycle_flows.csv")
+    svg_path = lifecycle.write_svg(result)
+    monthly_csv, flows_csv = lifecycle.write_csv(result)
+    print(f"      [OK] {svg_path.name} ({svg_path.stat().st_size / 1024:.1f} KB, committed)")
+    print(f"      [OK] {monthly_csv.name} ({monthly_csv.stat().st_size / 1024:.1f} KB, deliverable)")
+    print(f"      [OK] {flows_csv.name} ({flows_csv.stat().st_size / 1024:.1f} KB, deliverable)")
     return 0
 
 
@@ -484,6 +571,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--basket", action="store_true", help="market-basket analysis: top co-purchase rules + figure")
     parser.add_argument("--cohort", action="store_true",
                         help="cohort repeat-purchase retention: triangle + SVG heatmap/curve + CSV")
+    parser.add_argument("--lifecycle", action="store_true",
+                        help="lifecycle stages & growth accounting: monthly stage counts, flow matrix, SVG + CSVs")
     parser.add_argument("--clv", action="store_true",
                         help="customer lifetime value: BG/NBD + Gamma-Gamma, out-of-sample holdout check, figure + CSV")
     parser.add_argument("--returns", action="store_true",
@@ -500,6 +589,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_basket(force_reingest=args.force_reingest)
     if args.cohort:
         return run_cohort(force_reingest=args.force_reingest)
+    if args.lifecycle:
+        return run_lifecycle(force_reingest=args.force_reingest)
     if args.clv:
         return run_clv(force_reingest=args.force_reingest)
     if args.returns:

@@ -171,6 +171,85 @@ behaviour, not a fitted survival model; the full cohort×month triangle (with co
 and every censored cell blank) is written to `deliverables/cohort_retention.csv` and the
 **Cohort** sheet of the Excel workbook.
 
+## Customer lifecycle: monthly stages & growth accounting
+
+```bash
+python -m retail --lifecycle     # monthly stage counts + flow matrix + SVG + CSVs
+```
+
+RFM is a *snapshot*, cohort retention the *acquisition-time* view, CLV the
+*predictive* leg — this is the **operational** view a CRM team runs a month on:
+every identified customer gets exactly one lifecycle stage per calendar month,
+and the month-to-month movements between stages are counted into a flow matrix.
+A buyer-month is **new** (first in-window purchase), **retained** (bought last
+month too) or **resurrected** (back after ≥ 1 silent month); a non-buyer is
+**at-risk** (silent 1–3 months) or **dormant** (silent > 3). The 3-month
+dormancy threshold is a **documented choice, audited against the data**: the
+median gap between a customer's consecutive active months is 2 months, the 75th
+percentile is 3, and 78.0% of all comebacks happen within the threshold. The
+standard growth-accounting identities do the rest: `churned(m) = active(m-1) −
+retained(m)` and quick ratio `= (new + resurrected) / churned`.
+
+![Lifecycle stages](figures/lifecycle_stages.svg)
+
+**Headline (measured, 5,824 identified customers over 24 complete months):
+the average month has 1,041 active buyers = 212 new + 390 retained + 439
+resurrected, while 620 lapse — an overall quick ratio of 1.05**, above 1.0 in 13
+of 23 scored months. The striking number is the middle one: **in a typical month
+more buyers are *resurrections* than month-over-month repeats** (439 vs 390).
+This is the cohort analysis' annual-rhythm plateau seen from the operations
+side: for a wholesale-heavy customer base, skipping months is *normal
+purchasing behaviour*, and a CRM that treats every one-month absence as churn
+would misread most of this base.
+
+The aggregate month-to-month flow matrix (customers, all 23 complete month
+pairs — rows are the stage in month *m−1*, columns the stage in month *m*):
+
+| from \ to | new | retained | resurrected | at-risk | dormant |
+|---|---:|---:|---:|---:|---:|
+| (pre-acquisition) | 4,873 | – | – | – | – |
+| new | – | 1,315 | – | 4,318 | – |
+| retained | – | 4,958 | – | 3,386 | – |
+| resurrected | – | 2,687 | – | 6,565 | – |
+| at-risk | – | – | 7,139 | 16,795 | 5,712 |
+| dormant | – | – | 2,966 | – | 30,459 |
+
+Reading it as monthly rates: a **new** customer buys again next month 23.3% of
+the time (independently confirming the cohort month-1 repeat rate of 23.3% —
+two modules, one measured truth), a **retained** customer stays retained 59.4%
+of the time, an **at-risk** customer resurrects next month 24.1% of the time —
+and even **dormant** customers come back at 8.9% *per month*: 2,966 of the
+10,105 resurrections (29.4%) return from more than 3 months of silence.
+**Dormant is not dead here**, which is exactly what the annual re-order rhythm
+should look like in a flow matrix. The dashes are structural zeros (e.g. only
+pre-acquisition can flow into "new"; an active month followed by an active
+month is "retained" by definition) — the test suite asserts them.
+
+Two more measured views the table gives for free:
+
+- **Revenue by stage.** Of the GBP 16.56M identified-customer revenue in
+  complete months, **51.2% comes from retained buyer-months, 31.2% from
+  resurrected and 17.6% from new** — nearly a third of attributable revenue
+  each month is customers *coming back from a gap*, not steady monthly buyers.
+- **The December cliff is real but self-healing.** December 2010 is the worst
+  churn month on the books (1,082 lapse; quick ratio 0.33) — wholesale buyers
+  stop ordering after the gift season. The at-risk pool jumps to 2,164, and the
+  next quarter's resurrections (344, 372, 504) pull most of it back. The best
+  month is September 2011 (quick ratio 1.64), stock-up season starting.
+
+**Caveats.** Identified customers only, as everywhere (the 22.8% of rows with
+no `CustomerID` are structurally invisible); 28 customers first seen in the
+partial December 2011 are excluded, so the base is 5,824 rather than 5,852.
+"New" means *first purchase inside the observation window* — the earliest
+months conflate genuinely-new buyers with pre-existing accounts the window
+can't see (left-censoring; the December 2009 "951 new customers" are simply the
+launch-month actives). Stage definitions are definitional choices (activity =
+any invoice in the calendar month; threshold 3 months), configurable and
+printed on every output — they are a lens, not a behavioural truth. The full
+monthly table is `deliverables/lifecycle_stages.csv`, the flow matrix
+`deliverables/lifecycle_flows.csv`, and both live on the **Lifecycle** sheet of
+the Excel workbook.
+
 ## Predictive customer lifetime value
 
 ```bash
@@ -473,16 +552,20 @@ python -m retail --deliverables
 produces `deliverables/retail_analytics_executive.pdf` (executive briefing: citation,
 cleaning-impact table, forecast + CV results, RFM, cohort retention, CLV, returns, top SKUs),
 `deliverables/retail_analytics.xlsx` (sheets: CleaningReport, MonthlyRevenue, RFM, Cohort —
-the full cohort×month retention triangle with sizes and the size-weighted curve — CLV — the
+the full cohort×month retention triangle with sizes and the size-weighted curve — Lifecycle —
+the monthly stage counts with churn/quick-ratio and the aggregate stage-flow matrix — CLV — the
 BG/NBD + Gamma-Gamma parameters, the out-of-sample holdout check and the top customers by
 predicted value — Returns — the headline rates, reverse-logistics lag buckets and the full
 per-SKU sold-vs-returned table — ForecastCV, TopSKUs, Rules — all 1,222 association rules with
 metrics and the thin-support flag — DataQuality — the raw-vs-cleaned report card with
 per-dimension lift and the flat findings list — and WeeklyRevenue),
 `deliverables/cohort_retention.csv` (the same triangle as a flat CSV),
+`deliverables/lifecycle_stages.csv` + `deliverables/lifecycle_flows.csv` (the monthly
+lifecycle table and stage-flow matrix),
 `deliverables/customer_lifetime_value.csv` (the full per-customer CLV table) and
 `deliverables/returns_analysis.csv` (the full per-SKU returns table). The basket, cohort,
-CLV, returns and report-card steps run inside the pipeline, so every sheet is always current.
+lifecycle, CLV, returns and report-card steps run inside the pipeline, so every sheet is
+always current.
 
 ## Reproduce
 
@@ -492,9 +575,10 @@ python scripts/download_data.py    # one-time, ~45 MB from UCI
 python -m retail --deliverables    # full pipeline: ~1.5 min first run (xlsx parse), ~45 s after
 python -m retail --basket          # market-basket analysis only (skips politely if data absent)
 python -m retail --cohort          # cohort repeat-purchase retention only (skips politely if absent)
+python -m retail --lifecycle       # lifecycle stages & growth accounting only (skips politely if absent)
 python -m retail --clv             # customer lifetime value only (skips politely if absent)
 python -m retail --returns         # returns & cancellations analysis only (skips politely if absent)
-pytest -q                          # 97 tests, fixture-based, no download needed
+pytest -q                          # 113 tests, fixture-based, no download needed
 ruff check .
 ```
 
@@ -513,6 +597,10 @@ dataset; the one full-data test skips itself cleanly when `data/raw/` is absent.
 - **The final month is incomplete** (9 days of December 2011) and is annotated, not hidden.
 - **22.77% of rows have no CustomerID**, so RFM, cohort and CLV cover the 86.9% of revenue
   that is attributable; the rest is structurally invisible to customer analytics.
+- **Lifecycle stages are a declared lens, not a behavioural truth** — activity is "any
+  invoice in the calendar month" and dormancy is "> 3 silent months" (a choice audited
+  against the measured gap distribution, but still a choice). "New" is left-censored:
+  first purchase *inside the window*, so the earliest months overstate genuinely-new buyers.
 - **CLV is gross revenue, not profit** — no cost data exists, so no margin is modelled — and
   it is a finite, undiscounted 180-day horizon, not an infinite-horizon discounted figure.
   Its holdout error is 0.4% in aggregate, but that is one retailer over one 183-day window.

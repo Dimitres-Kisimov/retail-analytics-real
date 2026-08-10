@@ -75,6 +75,29 @@ on any tabular dataset (a supplier feed, a CRM export) — the retail run is jus
 the demo. It is explicitly a heuristic scorecard, **not** a certification that
 the data is true; a high score means the declared checks passed.
 
+## 6. Lifecycle flows → where retention effort actually goes
+
+**Measured:** in the average complete month, 1,041 identified customers buy — 212 new,
+390 retained from last month and 439 *resurrected after a silent gap* — while 620 lapse
+(overall quick ratio 1.05). At-risk customers (silent 1–3 months) resurrect at 24.1% the
+next month; even dormant customers (> 3 silent months) come back at 8.9% per month, and
+29.4% of all resurrections are from deep dormancy. Revenue splits 51.2% retained / 31.2%
+resurrected / 17.6% new.
+
+**Why it matters:** the flow matrix says this base's biggest recurring revenue engine
+after steady repeats is *comebacks*, not new acquisition — so a churn dashboard that
+flags every one-month absence would mislabel roughly half the base as lost while they
+are mid-cycle. The operational move the numbers support is timing outreach to the
+measured reorder rhythm (median gap 2 months, p75 3) rather than reacting to a single
+silent month. *Illustrative estimate:* December 2010 alone put 1,082 customers into the
+at-risk pool; at the measured 24.1% monthly comeback rate, most of the following
+quarter's ~1,220 resurrections were this pool returning on its own — a baseline any
+win-back campaign must beat before claiming credit.
+
+**Deliverable:** the Lifecycle sheet (monthly stage counts, churn, quick ratio, the flow
+matrix), `lifecycle_stages.csv`, `lifecycle_flows.csv` and the committed
+`figures/lifecycle_stages.svg`.
+
 ## Caveats that bound all of the above
 
 Single retailer, UK-heavy, gift-seasonal, 2009-2011 nominal GBP, wholesale/retail mix,

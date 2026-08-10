@@ -191,6 +191,63 @@ def _cohort_page(pp: PdfPages, ctx: dict) -> None:
     plt.close(fig)
 
 
+def _lifecycle_page(pp: PdfPages, ctx: dict) -> None:
+    """Lifecycle page: growth-accounting bars + the aggregate stage-flow matrix."""
+    from retail import lifecycle
+
+    result = ctx.get("lifecycle_result")
+    if result is None or result.monthly.empty:
+        return
+    _style()
+    m = result.monthly
+    fig, ax1 = plt.subplots(figsize=(11, 8.5))
+    x = np.arange(len(m))
+    bottom = np.zeros(len(m))
+    # stack order retained (blue) -> resurrected (yellow) -> new (green); churn magenta below
+    for name, color in [("retained", BLUE), ("resurrected", CATEGORICAL[3]), ("new", CATEGORICAL[1])]:
+        vals = m[name].to_numpy(dtype=float)
+        ax1.bar(x, vals, bottom=bottom, color=color, width=0.72, label=name)
+        bottom += vals
+    churn = np.nan_to_num(m["churned"].to_numpy(dtype=float), nan=0.0)
+    ax1.bar(x, -churn, color=CATEGORICAL[2], width=0.72, label="churned")
+    ax1.axhline(0, color=INK_2, linewidth=1)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(m["month"], rotation=45, ha="right", fontsize=7)
+    ax1.set_ylabel("identified customers buying (above) / lapsing (below)")
+    ax1.grid(axis="x", visible=False)
+    ax1.legend(frameon=False, fontsize=8, loc="upper left", ncols=4)
+    ax1.set_title(
+        f"Customer lifecycle - monthly growth accounting ({result.n_customers:,} "
+        f"identified customers)", fontsize=12)
+
+    hl = result.headline()
+    lines = []
+    if hl:
+        lines.append(
+            f"Mean month: {hl['mean_active']:,.0f} active = {hl['mean_new']:,.0f} new + "
+            f"{hl['mean_retained']:,.0f} retained + {hl['mean_resurrected']:,.0f} resurrected; "
+            f"{hl['mean_churned']:,.0f} churn out. Overall quick ratio "
+            f"{hl['overall_quick_ratio']:.2f} (>=1 in {hl['months_qr_ge_1']}/{hl['months_scored']} months)."
+        )
+    lines.append(
+        f"Stage definitions are documented choices: activity = any invoice in the calendar "
+        f"month; dormant = silent > {result.config.dormancy_months} months."
+    )
+    lines.append(
+        f"'New' is first purchase inside the window (left-censored); complete months through "
+        f"{result.last_complete_month} - the partial final month is excluded."
+    )
+    flows_txt = ""
+    if not result.flows.empty:
+        flows_txt = "Aggregate month-to-month stage flows (customers):\n" + \
+            lifecycle.flow_frame(result).to_string(index=False)
+    fig.text(0.07, 0.30, "\n".join(lines) + ("\n\n" + flows_txt if flows_txt else ""),
+             fontsize=8.5, color=INK_2, va="top", family="monospace")
+    fig.subplots_adjust(top=0.92, bottom=0.44, left=0.09, right=0.96)
+    pp.savefig(fig)
+    plt.close(fig)
+
+
 def _clv_page(pp: PdfPages, ctx: dict) -> None:
     """CLV page: out-of-sample validation bars + concentration Lorenz + params/headline."""
     from retail import clv
@@ -353,6 +410,7 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
         _forecast_page(pp, ctx)
         _rfm_page(pp, ctx)
         _cohort_page(pp, ctx)
+        _lifecycle_page(pp, ctx)
         _clv_page(pp, ctx)
         _returns_page(pp, ctx)
         sku = ctx["sku_table"].copy()
@@ -421,6 +479,37 @@ def _write_cohort_sheet(writer, ctx: dict) -> None:
     curve["avg_retention_pct"] = (100.0 * curve["avg_retention"]).round(2)
     curve = curve[["offset", "avg_retention_pct", "cohorts_observed", "customers_observed", "repeat_customers"]]
     curve.to_excel(writer, sheet_name=sheet, index=False, startrow=row)
+
+
+def _write_lifecycle_sheet(writer, ctx: dict) -> None:
+    """Lifecycle sheet: monthly stage counts + growth accounting + the flow matrix (screen == export)."""
+    from retail import lifecycle
+
+    result = ctx.get("lifecycle_result")
+    if result is None or result.monthly.empty:
+        return
+    sheet = "Lifecycle"
+    g = result.gap_stats
+    gap_note = (f"comeback gaps: median {g['p50']:.0f} / p75 {g['p75']:.0f} months, "
+                f"{100 * g['share_within_dormancy']:.1f}% within the threshold" if g else "n/a")
+    header = pd.DataFrame(
+        {"Customer lifecycle stages & growth accounting - one stage per identified customer per complete month": [
+            f"customers {result.n_customers:,} | months through {result.last_complete_month} | "
+            f"dormancy threshold {result.config.dormancy_months} months (documented choice; {gap_note}) | "
+            "churned = active last month, not this month | quick ratio = (new+resurrected)/churned"
+        ]}
+    )
+    header.to_excel(writer, sheet_name=sheet, index=False, startrow=0)
+    monthly = lifecycle.monthly_frame(result)
+    monthly.to_excel(writer, sheet_name=sheet, index=False, startrow=2)
+    row = len(monthly) + 5
+    flows_header = pd.DataFrame(
+        {"Aggregate month-to-month stage flows (customers, all complete month pairs)": [
+            "rows = stage in month m-1 (plus pre-acquisition entries), columns = stage in month m"
+        ]}
+    )
+    flows_header.to_excel(writer, sheet_name=sheet, index=False, startrow=row)
+    lifecycle.flow_frame(result).to_excel(writer, sheet_name=sheet, index=False, startrow=row + 2)
 
 
 def _write_clv_sheet(writer, ctx: dict) -> None:
@@ -548,6 +637,7 @@ def export_excel(ctx: dict, path: Path | None = None) -> Path:
         monthly.to_excel(writer, sheet_name="MonthlyRevenue", index=False)
         ctx["rfm_summary"].to_excel(writer, sheet_name="RFM", index=False)
         _write_cohort_sheet(writer, ctx)
+        _write_lifecycle_sheet(writer, ctx)
         _write_clv_sheet(writer, ctx)
         _write_returns_sheet(writer, ctx)
         ctx["cv"].to_excel(writer, sheet_name="ForecastCV", index=False)
