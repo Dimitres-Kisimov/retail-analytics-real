@@ -525,9 +525,11 @@ def fig_top_rules(
     solid survives. Single series measuring one magnitude (lift), so one hue and
     direct labels — same validated palette as the other figures.
     """
-    import matplotlib.pyplot as plt  # noqa: F401  (backend configured in retail.eda)
+    import matplotlib.pyplot as plt  # noqa: F401  (backend configured in retail.plate)
 
-    from retail.eda import BLUE, INK_2, MUTED, _new_axes, _save
+    from retail import plate
+    from retail.eda import _new_axes
+    from retail.plate import BLUE, INK_2, MUTED
 
     solid = dedupe_by_itemset([r for r in rules if not r.thin_support])[:n]
     if not solid:
@@ -535,29 +537,25 @@ def fig_top_rules(
     labels = [f"{_short(format_itemset(r.antecedent))}\n-> {_short(format_itemset(r.consequent))}"
               for r in solid][::-1]
     lifts = [r.lift for r in solid][::-1]
-    fig, ax = _new_axes(figsize=(9.5, 6.2))
+    fig, ax = _new_axes(figsize=(9.5, 6.6))
     ax.grid(axis="y", visible=False)
     ax.grid(axis="x", visible=True)
     ax.barh(range(len(solid)), lifts, color=BLUE, height=0.62)
     ax.set_yticks(range(len(solid)))
     ax.set_yticklabels(labels, fontsize=7.5)
     ax.set_xlabel("lift (co-purchase frequency vs independence; 1 = independent)")
-    ax.axvline(1.0, color=MUTED, linewidth=1, linestyle="--")
+    ax.axvline(1.0, color=MUTED, linewidth=1, linestyle=":")
     for i, (lift, rule) in enumerate(zip(lifts, solid[::-1], strict=True)):
         ax.text(lift, i, f" {lift:.1f}x ({rule.support_count} inv.)",
                 va="center", fontsize=7.5, color=INK_2)
     ax.set_xlim(0, max(lifts) * 1.30)
     ax.set_title(f"Top {len(solid)} co-purchase item sets by lift")
-    fig.tight_layout(rect=(0, 0.05, 1, 1))
-    fig.text(
-        0.02,
-        0.012,
-        "Observational co-purchase frequency, not causation. Each item set shown once "
-        "(higher-confidence direction); thin-support rules excluded.",
-        fontsize=7.5,
-        color=MUTED,
+    rect = plate.chrome(
+        fig, "basket",
+        notes=("Observational co-purchase frequency, not causation. Each item set shown once "
+               "(higher-confidence direction); thin-support rules excluded.",),
     )
-    return _save(fig, out_dir / "basket_top_rules.png", tight=False)
+    return plate.save(fig, out_dir / "basket_top_rules.png", rect)
 
 
 def _short(text: str, width: int = 46) -> str:

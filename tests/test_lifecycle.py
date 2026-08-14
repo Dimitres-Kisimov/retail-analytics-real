@@ -151,6 +151,12 @@ def test_determinism_and_svg_wellformed(cleaned, result):
     minidom.parseString(svg)                               # raises if not well-formed XML
     assert svg.startswith("<svg")
     assert "Customer lifecycle" in svg
+    # the field-notes plate system: numbered plate + designed attribution caption
+    assert "PLATE 11" in svg
+    assert "UCI Online Retail II" in svg and "CC BY 4.0" in svg
+    # the flow object renders whenever the flow matrix has transitions
+    if not result.flows.empty:
+        assert "Where each stage's customers land next month" in svg
     assert lifecycle.render_svg(again) == svg              # byte-identical re-render
 
 

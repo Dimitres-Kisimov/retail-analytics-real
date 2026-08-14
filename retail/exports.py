@@ -2,6 +2,13 @@
 
 Both are generated end-to-end by ``python -m retail --deliverables`` and land in
 ``deliverables/`` (git-ignored — they are build artifacts, rebuilt on demand).
+
+The PDF pages are set in the shared "field notes" plate system (``retail.plate``):
+every page carries its plate number and the dataset attribution in a designed
+footer, pages that also exist as committed figures carry the SAME plate number
+in both places, and the PDF's page order follows the plate numbering. Model
+output (forecasts, CLV predictions) is drawn dashed / outline; measured marks
+are solid ink.
 """
 
 from __future__ import annotations
@@ -16,9 +23,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.colors import BoundaryNorm, ListedColormap
 
-from retail.eda import BLUE, CATEGORICAL, GRID, INK, INK_2, MUTED, SURFACE, _style
+from retail import plate
 from retail.paths import DELIVERABLES
+from retail.plate import (
+    BLUE,
+    GREEN,
+    GRID,
+    INK,
+    INK_2,
+    MAGENTA,
+    MODEL_DASH,
+    MUTED,
+    SURFACE,
+)
 
 PDF_NAME = "retail_analytics_executive.pdf"
 XLSX_NAME = "retail_analytics.xlsx"
@@ -34,11 +53,26 @@ CITATION = (
 # --------------------------------------------------------------------------- #
 # PDF
 # --------------------------------------------------------------------------- #
-def _text_page(pp: PdfPages, title: str, blocks: list[tuple[str, str]]) -> None:
-    _style()
+def _style_table(table, fontsize: float = 8, yscale: float = 1.5) -> None:
+    """Field-notes table styling: horizontal hairlines only, bold header row."""
+    table.auto_set_font_size(False)
+    table.set_fontsize(fontsize)
+    table.scale(1.0, yscale)
+    for (row, _col), cell in table.get_celld().items():
+        cell.set_edgecolor(GRID)
+        cell.set_linewidth(0.8)
+        cell.visible_edges = "B"
+        if row == 0:
+            cell.set_text_props(fontweight="bold", color=INK)
+            cell.set_facecolor(SURFACE)
+
+
+def _text_page(pp: PdfPages, key: str, title: str, blocks: list[tuple[str, str]]) -> None:
+    plate.style()
     fig = plt.figure(figsize=(11, 8.5))
-    fig.text(0.07, 0.90, title, fontsize=20, fontweight="bold", color=INK)
-    y = 0.82
+    plate.chrome(fig, key)
+    fig.text(0.07, 0.88, title, fontsize=20, fontweight="bold", color=INK)
+    y = 0.80
     for heading, body in blocks:
         if heading:
             fig.text(0.07, y, heading, fontsize=12, fontweight="bold", color=INK)
@@ -54,9 +88,12 @@ def _clip(value: object, width: int = 58) -> str:
     return text if len(text) <= width else text[: width - 3] + "..."
 
 
-def _table_page(pp: PdfPages, df: pd.DataFrame, title: str, note: str = "", col_widths=None) -> None:
-    _style()
+def _table_page(pp: PdfPages, df: pd.DataFrame, key: str, title: str, note: str = "",
+                col_widths=None) -> None:
+    plate.style()
     fig, ax = plt.subplots(figsize=(11, 8.5))
+    notes = tuple(note.split("\n")) if note else ()
+    plate.chrome(fig, key, notes=notes)
     ax.axis("off")
     ax.set_title(title, fontsize=16, loc="left", pad=20, color=INK)
     table = ax.table(
@@ -66,23 +103,16 @@ def _table_page(pp: PdfPages, df: pd.DataFrame, title: str, note: str = "", col_
         cellLoc="left",
         colWidths=col_widths,
     )
-    table.auto_set_font_size(False)
-    table.set_fontsize(8)
-    table.scale(1.0, 1.5)
-    for (row, _col), cell in table.get_celld().items():
-        cell.set_edgecolor(GRID)
-        if row == 0:
-            cell.set_text_props(fontweight="bold", color=INK)
-            cell.set_facecolor(SURFACE)
-    if note:
-        fig.text(0.07, 0.06, note, fontsize=8.5, color=MUTED)
+    _style_table(table)
+    fig.subplots_adjust(top=0.86, bottom=0.16, left=0.07, right=0.95)
     pp.savefig(fig)
     plt.close(fig)
 
 
 def _forecast_page(pp: PdfPages, ctx: dict) -> None:
-    _style()
+    plate.style()
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 8.5), height_ratios=[1, 1])
+    rect = plate.chrome(fig, "forecast", modelled=True)
 
     monthly = ctx["monthly"]
     x = np.arange(len(monthly))
@@ -96,9 +126,12 @@ def _forecast_page(pp: PdfPages, ctx: dict) -> None:
 
     final = ctx["final_fold"]
     idx = np.arange(len(final))
-    ax2.plot(idx, final["actual"], color=INK, linewidth=2, label="actual", marker="o", markersize=4)
-    for color, model in zip(CATEGORICAL, [c for c in final.columns if c != "actual"], strict=False):
-        ax2.plot(idx, final[model], color=color, linewidth=1.6, label=model)
+    # Real weekly revenue in solid ink; every model overlay dashed, per the
+    # plate system's measured-vs-modelled convention.
+    ax2.plot(idx, final["actual"], color=INK, linewidth=2.2, label="actual", marker="o", markersize=4)
+    model_colors = [MUTED, GREEN, MAGENTA, BLUE]
+    for color, model in zip(model_colors, [c for c in final.columns if c != "actual"], strict=False):
+        ax2.plot(idx, final[model], color=color, linewidth=1.6, linestyle=MODEL_DASH, label=model)
     ax2.set_xticks(idx)
     ax2.set_xticklabels([d.strftime("%Y-%m-%d") for d in final.index], rotation=45, ha="right", fontsize=7)
     ax2.set_ylabel("weekly revenue (GBP)")
@@ -120,15 +153,16 @@ def _forecast_page(pp: PdfPages, ctx: dict) -> None:
         color=INK_2,
     )
     ax2.set_title("Final-fold forecast vs actual (weekly revenue)", fontsize=11)
-    fig.tight_layout()
+    fig.tight_layout(rect=rect)
     pp.savefig(fig)
     plt.close(fig)
 
 
 def _rfm_page(pp: PdfPages, ctx: dict) -> None:
-    _style()
+    plate.style()
     seg = ctx["rfm_summary"].sort_values("RevenueShare")
     fig, ax = plt.subplots(figsize=(11, 8.5))
+    rect = plate.chrome(fig, "rfm")
     ax.grid(axis="y", visible=False)
     ax.barh(seg["Segment"], 100 * seg["RevenueShare"], color=BLUE, height=0.62)
     for i, (share, customers) in enumerate(zip(seg["RevenueShare"], seg["Customers"], strict=True)):
@@ -140,6 +174,7 @@ def _rfm_page(pp: PdfPages, ctx: dict) -> None:
         "RFM segments - revenue share (customers with a real CustomerID only; "
         f"{int(seg['Customers'].sum()):,} customers)"
     )
+    fig.tight_layout(rect=rect)
     pp.savefig(fig)
     plt.close(fig)
 
@@ -151,13 +186,26 @@ def _cohort_page(pp: PdfPages, ctx: dict) -> None:
     result = ctx.get("cohort_result")
     if result is None or result.triangle.empty:
         return
-    _style()
+    plate.style()
     tri = result.triangle
     ncol = min(DISPLAY_OFFSETS, int(tri.columns.max())) + 1
     mat = tri[[k for k in tri.columns if k < ncol]].to_numpy(dtype=float)
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 8.5), height_ratios=[2.4, 1])
-    ax1.imshow(mat, aspect="auto", cmap="Blues", vmin=0.0, vmax=1.0)
+    note = (f"Last complete month {result.last_complete_month}; "
+            f"blank cells are right-censored (not yet observable). Offset 0 = acquisition month (100%).")
+    rect = plate.chrome(fig, "cohort", notes=(
+        note,
+        "Cell shade is the shared binned single-hue scale (legibility only); "
+        "the exact % is printed in each cell.",
+    ))
+
+    # The same binned sequential scale as the committed SVG plate: one hue,
+    # dark-anchored, and an AA-contrast label ink chosen per bin.
+    cmap = ListedColormap([fill for _hi, fill, _ink in plate.SEQ_BINS])
+    cmap.set_bad(SURFACE)
+    norm = BoundaryNorm([e / 100.0 for e in plate.SEQ_BIN_EDGES], cmap.N)
+    ax1.imshow(mat, aspect="auto", cmap=cmap, norm=norm)
     ax1.set_xticks(range(ncol))
     ax1.set_xticklabels(range(ncol), fontsize=8)
     ax1.set_yticks(range(len(tri.index)))
@@ -168,8 +216,9 @@ def _cohort_page(pp: PdfPages, ctx: dict) -> None:
         for j in range(mat.shape[1]):
             v = mat[i, j]
             if not np.isnan(v):
+                _fill, label_ink = plate.seq_bin(100 * v)
                 ax1.text(j, i, f"{round(100 * v)}", ha="center", va="center",
-                         fontsize=6.5, color="white" if v > 0.55 else INK_2)
+                         fontsize=6.5, color=label_ink)
     ax1.set_title(
         f"Cohort repeat-purchase retention (% of each first-purchase cohort active later; "
         f"{result.n_customers:,} identified customers)", fontsize=11)
@@ -183,10 +232,7 @@ def _cohort_page(pp: PdfPages, ctx: dict) -> None:
     ax2.set_ylabel("repeat rate (%)")
     ax2.grid(axis="x", visible=False)
     ax2.set_title("Headline retention curve (size-weighted across observable cohorts)", fontsize=10)
-    note = (f"Last complete month {result.last_complete_month}; "
-            f"blank cells are right-censored (not yet observable). Offset 0 = acquisition month (100%).")
-    fig.text(0.07, 0.045, note, fontsize=8, color=MUTED)
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    fig.tight_layout(rect=rect)
     pp.savefig(fig)
     plt.close(fig)
 
@@ -198,18 +244,22 @@ def _lifecycle_page(pp: PdfPages, ctx: dict) -> None:
     result = ctx.get("lifecycle_result")
     if result is None or result.monthly.empty:
         return
-    _style()
+    plate.style()
     m = result.monthly
     fig, ax1 = plt.subplots(figsize=(11, 8.5))
+    plate.chrome(fig, "lifecycle")
     x = np.arange(len(m))
     bottom = np.zeros(len(m))
-    # stack order retained (blue) -> resurrected (yellow) -> new (green); churn magenta below
-    for name, color in [("retained", BLUE), ("resurrected", CATEGORICAL[3]), ("new", CATEGORICAL[1])]:
+    # Stack order and stage colors are the shared STATE_FILL mapping, so the
+    # PDF page and the committed SVG plate read as the same object.
+    for name in ("retained", "resurrected", "new"):
         vals = m[name].to_numpy(dtype=float)
-        ax1.bar(x, vals, bottom=bottom, color=color, width=0.72, label=name)
+        ax1.bar(x, vals, bottom=bottom, color=lifecycle.STATE_FILL[name], width=0.72,
+                edgecolor=SURFACE, linewidth=0.8, label=name)
         bottom += vals
     churn = np.nan_to_num(m["churned"].to_numpy(dtype=float), nan=0.0)
-    ax1.bar(x, -churn, color=CATEGORICAL[2], width=0.72, label="churned")
+    ax1.bar(x, -churn, color=MAGENTA, width=0.72, edgecolor=SURFACE, linewidth=0.8,
+            label="churned")
     ax1.axhline(0, color=INK_2, linewidth=1)
     ax1.set_xticks(x)
     ax1.set_xticklabels(m["month"], rotation=45, ha="right", fontsize=7)
@@ -237,13 +287,20 @@ def _lifecycle_page(pp: PdfPages, ctx: dict) -> None:
         f"'New' is first purchase inside the window (left-censored); complete months through "
         f"{result.last_complete_month} - the partial final month is excluded."
     )
-    flows_txt = ""
+    fig.text(0.07, 0.335, "\n".join(lines), fontsize=8.5, color=INK_2, va="top")
+
     if not result.flows.empty:
-        flows_txt = "Aggregate month-to-month stage flows (customers):\n" + \
-            lifecycle.flow_frame(result).to_string(index=False)
-    fig.text(0.07, 0.30, "\n".join(lines) + ("\n\n" + flows_txt if flows_txt else ""),
-             fontsize=8.5, color=INK_2, va="top", family="monospace")
-    fig.subplots_adjust(top=0.92, bottom=0.44, left=0.09, right=0.96)
+        fig.text(0.07, 0.25, "Aggregate month-to-month stage flows (customers):",
+                 fontsize=9, color=INK, fontweight="bold", va="top")
+        flows = lifecycle.flow_frame(result)
+        tbl_ax = fig.add_axes((0.07, 0.075, 0.52, 0.16))
+        tbl_ax.axis("off")
+        table = tbl_ax.table(
+            cellText=[[str(v) for v in row] for row in flows.itertuples(index=False)],
+            colLabels=list(flows.columns), loc="center", cellLoc="right",
+        )
+        _style_table(table, fontsize=7.5, yscale=1.2)
+    fig.subplots_adjust(top=0.90, bottom=0.46, left=0.09, right=0.96)
     pp.savefig(fig)
     plt.close(fig)
 
@@ -255,8 +312,9 @@ def _clv_page(pp: PdfPages, ctx: dict) -> None:
     result = ctx.get("clv_result")
     if result is None or result.clv_table.empty:
         return
-    _style()
+    plate.style()
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 8.5))
+    plate.chrome(fig, "clv", modelled=True)
 
     v = result.validation
     if v is not None and not v.by_frequency.empty:
@@ -264,7 +322,8 @@ def _clv_page(pp: PdfPages, ctx: dict) -> None:
         idx = np.arange(len(bf))
         w = 0.4
         ax1.bar(idx - w / 2, bf["actual_mean"], width=w, color=BLUE, label="actual")
-        ax1.bar(idx + w / 2, bf["predicted_mean"], width=w, color=CATEGORICAL[1], label="predicted")
+        ax1.bar(idx + w / 2, bf["predicted_mean"], width=w, facecolor=SURFACE,
+                edgecolor=INK_2, linewidth=1.1, linestyle=MODEL_DASH, label="predicted")
         ax1.set_xticks(idx)
         ax1.set_xticklabels(bf["cal_frequency"])
         ax1.set_xlabel("purchases in calibration period")
@@ -274,8 +333,8 @@ def _clv_page(pp: PdfPages, ctx: dict) -> None:
         ax1.set_title("Out-of-sample check (predicted vs actual)", fontsize=11)
 
     cum_x, cum_y = clv.lorenz_points(result.clv_table["clv"].to_numpy())
-    ax2.plot(100 * cum_x, 100 * cum_y, color=BLUE, linewidth=2)
-    ax2.plot([0, 100], [0, 100], color=MUTED, linewidth=1, linestyle="--")
+    ax2.plot(100 * cum_x, 100 * cum_y, color=BLUE, linewidth=2, linestyle=MODEL_DASH)
+    ax2.plot([0, 100], [0, 100], color=MUTED, linewidth=1, linestyle=":")
     ax2.set_xlabel("share of customers (%, lowest CLV first)")
     ax2.set_ylabel("share of predicted CLV (%)")
     ax2.grid(axis="x", visible=False)
@@ -302,27 +361,21 @@ def _clv_page(pp: PdfPages, ctx: dict) -> None:
         "Gross revenue, not margin (no cost data); finite undiscounted horizon; "
         "identified customers only."
     )
-    fig.text(0.07, 0.40, "\n".join(lines), fontsize=9.5, color=INK_2, va="top", family="monospace")
+    fig.text(0.07, 0.42, "\n".join(lines), fontsize=9.5, color=INK_2, va="top", family="monospace")
 
     top = clv.clv_summary_table(result, top=8).copy()
     top["monetary_value"] = top["monetary_value"].round(0)
-    tbl_ax = fig.add_axes((0.07, 0.06, 0.86, 0.24))
+    tbl_ax = fig.add_axes((0.07, 0.10, 0.86, 0.17))
     tbl_ax.axis("off")
     table = tbl_ax.table(
         cellText=[[_clip(v) for v in row] for row in top.itertuples(index=False)],
         colLabels=list(top.columns), loc="center", cellLoc="center",
     )
-    table.auto_set_font_size(False)
-    table.set_fontsize(7.5)
-    table.scale(1.0, 1.3)
-    for (row, _col), cell in table.get_celld().items():
-        cell.set_edgecolor(GRID)
-        if row == 0:
-            cell.set_text_props(fontweight="bold", color=INK)
-            cell.set_facecolor(SURFACE)
+    _style_table(table, fontsize=7.5, yscale=1.1)
 
-    fig.suptitle("Predictive customer lifetime value", fontsize=16, x=0.07, ha="left", color=INK)
-    fig.subplots_adjust(top=0.90, bottom=0.55, left=0.09, right=0.95, wspace=0.28)
+    fig.suptitle("Predictive customer lifetime value", fontsize=16, x=0.07, ha="left", color=INK,
+                 y=0.915)
+    fig.subplots_adjust(top=0.85, bottom=0.58, left=0.09, right=0.95, wspace=0.28)
     pp.savefig(fig)
     plt.close(fig)
 
@@ -356,7 +409,7 @@ def _returns_page(pp: PdfPages, ctx: dict) -> None:
         "exceed 100% when a credit note posts in a quieter month than its sale."
     )
     _table_page(
-        pp, top,
+        pp, top, "returns",
         "Returns & cancellations - top returned SKUs by value",
         note=note,
         col_widths=[0.09, 0.34, 0.12, 0.16, 0.18],
@@ -370,6 +423,7 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
     with PdfPages(path) as pp:
         _text_page(
             pp,
+            "cover",
             "Online Retail II - honest analytics on real data",
             [
                 ("Dataset & citation", CITATION),
@@ -392,6 +446,12 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
                     "5. All methods implemented with numpy/pandas only - no ML/mining libraries.",
                 ),
                 (
+                    "The plate system",
+                    "Every artifact of this project is a numbered plate in one design system;\n"
+                    "pages here share their numbers with the committed figures. Measured marks\n"
+                    "are solid ink; model output is dashed / outline.",
+                ),
+                (
                     "Honesty notes",
                     "Single retailer, UK-heavy, gift-season seasonality, final month incomplete.\n"
                     "Where a simple baseline wins a fold, that is reported, not hidden.",
@@ -402,6 +462,7 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
         _table_page(
             pp,
             ctx["clean_table"],
+            "cleaning",
             "Cleaning impact - every decision with its row cost",
             note="Cancellations are separated (kept for returns analysis), not deleted. "
             "Missing CustomerID rows are flagged and kept for revenue, excluded from RFM.",
@@ -420,6 +481,7 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
         _table_page(
             pp,
             sku,
+            "sku_forecast",
             "Top-10 SKU weekly demand - forecastability check",
             note="MASE > 1 means the model failed to beat a one-week naive walk on that SKU. "
             "Zero-wk share = share of zero-demand weeks since first sale (intermittency).",

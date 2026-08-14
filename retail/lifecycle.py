@@ -57,7 +57,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from retail import plate as _plate
 from retail.paths import DELIVERABLES, FIGURES
+from retail.plate import GRID as _GRID
+from retail.plate import INK as _INK
+from retail.plate import INK_2 as _INK_2
+from retail.plate import MUTED as _MUTED
+from retail.plate import SURFACE as _SURFACE
 
 # Stage vocabulary. Order is the canonical reporting order.
 STATES = ("new", "retained", "resurrected", "at_risk", "dormant")
@@ -66,21 +72,17 @@ ENTRY = "(pre-acquisition)"  # flow-matrix source row for first-ever purchases
 
 _CODE = {name: i + 1 for i, name in enumerate(STATES)}  # 0 = not yet acquired
 
-# Palette shared with retail.eda (validated light-mode categorical order).
-# Stack adjacency blue->yellow->green (+ magenta across the axis) passes the
-# CVD checks; at-risk/dormant are DELIBERATE neutrals -- inactive stages are
-# recessive by design, with identity carried by stack order + labels + legend.
-_RETAINED = "#2a78d6"   # blue
-_RESURRECTED = "#eda100"  # yellow
-_NEW = "#008300"        # green
-_CHURNED = "#e87ba4"    # magenta, below the axis
-_AT_RISK = "#b4b2a9"    # neutral mid
-_DORMANT = "#dcdbd3"    # neutral light
-_INK = "#0b0b0b"
-_INK_2 = "#52514e"
-_MUTED = "#898781"
-_GRID = "#e1e0d9"
-_SURFACE = "#fcfcfb"
+# Palette shared with every other plate (retail.plate; validated light-mode
+# categorical order). Stack adjacency blue->yellow->green (+ magenta across the
+# axis) passes the CVD checks; at-risk/dormant are DELIBERATE neutrals --
+# inactive stages are recessive by design, with identity carried by stack order
+# + labels + legend (never by color alone).
+_RETAINED = _plate.BLUE
+_RESURRECTED = _plate.YELLOW
+_NEW = _plate.GREEN
+_CHURNED = _plate.MAGENTA   # below the axis
+_AT_RISK = "#b4b2a9"        # neutral mid
+_DORMANT = "#dcdbd3"        # neutral light
 
 STATE_FILL = {
     "new": _NEW,
@@ -344,10 +346,15 @@ def _nice_step(span: float) -> int:
 
 
 def render_svg(result: LifecycleResult) -> str:
-    """Growth-accounting bars + base-composition area as one SVG string.
+    """Growth-accounting bars + base composition + the stage-flow object, one SVG.
 
-    Pure string formatting from the measured monthly table -- no timestamps,
-    no RNG, so re-running yields a byte-identical file.
+    Set as a "field notes" plate (retail.plate): numbered chrome, hairline
+    rules, attribution designed into the footer. The month-to-month stage
+    transitions are drawn as a flow object -- labeled nodes and count-labeled
+    ribbons -- so identity is form-redundant (position + text + width), never
+    color alone. Pure string formatting from the measured monthly table and
+    flow matrix -- no timestamps, no RNG, so re-running yields a byte-identical
+    file.
     """
     m = result.monthly
     months = list(m["month"]) if not m.empty else []
@@ -357,21 +364,24 @@ def render_svg(result: LifecycleResult) -> str:
     cw = 34                      # px per month column
     left = 74
     plot_w = max(cw * n, cw)
-    width = left + plot_w + 150  # right margin carries the direct band labels
-    top = 118
+    width = max(left + plot_w + 150, 880)  # right margin carries the direct band labels
+    top = 170
     p1_h_up, p1_h_dn = 170, 90   # panel 1: above-axis / below-axis heights
     p1_axis = top + p1_h_up
     p1_bottom = p1_axis + p1_h_dn
     p2_top = p1_bottom + 130
     p2_h = 170
     p2_bottom = p2_top + p2_h
-    height = p2_bottom + 96
+    has_flows = not result.flows.empty
+    flow_h = 300
+    p3_title = p2_bottom + 66
+    p3_top = p3_title + 56
+    p3_bottom = p3_top + flow_h
+    content_bottom = (p3_bottom + 50) if has_flows else (p2_bottom + 30)
+    height = content_bottom + _plate.svg_footer_height(2)
     seg_gap = 2                  # 2px surface gap between stacked fills
 
-    def txt(x, y, s, size, fill, *, anchor="start", weight="400"):
-        a = f' text-anchor="{anchor}"' if anchor != "start" else ""
-        w = f' font-weight="{weight}"' if weight != "400" else ""
-        return f'<text x="{x:.1f}" y="{y:.1f}" font-size="{size}" fill="{fill}"{a}{w}>{s}</text>'
+    txt = _plate.svg_text
 
     p: list[str] = []
     p.append(
@@ -380,12 +390,13 @@ def render_svg(result: LifecycleResult) -> str:
         f'style="background:{_SURFACE}">'
     )
     p.append(f'<rect x="0" y="0" width="{width}" height="{height}" fill="{_SURFACE}"/>')
+    p.extend(_plate.svg_header(width, "lifecycle"))
 
     hl = result.headline()
-    p.append(txt(left, 34, "Customer lifecycle - monthly growth accounting", 18, _INK, weight="700"))
-    p.append(txt(left, 55, f"Identified customers (n={result.n_customers:,}); every buyer-month is "
+    p.append(txt(left, 94, "Customer lifecycle - monthly growth accounting", 19, _INK, weight="700"))
+    p.append(txt(left, 116, f"Identified customers (n={result.n_customers:,}); every buyer-month is "
                  "new, retained (bought last month too) or resurrected (back after a gap).", 11, _INK_2))
-    p.append(txt(left, 72, "Churned = bought last month, not this month. Quick ratio = "
+    p.append(txt(left, 133, "Churned = bought last month, not this month. Quick ratio = "
                  "(new + resurrected) / churned; >= 1 means the buyer base grew.", 11, _MUTED))
 
     if m.empty:
@@ -532,21 +543,167 @@ def render_svg(result: LifecycleResult) -> str:
     for y_lab, (_y0, text) in zip(placed, label_rows, strict=True):
         p.append(txt(left + plot_w + 10, y_lab, text, 10, _INK_2))
 
-    # footnotes
+    # ---- panel 3: the flow object (stage transitions, form-redundant) ----- #
+    if has_flows:
+        p.extend(_flow_object(result, width, left, p3_title, p3_top, flow_h, p3_bottom))
+
+    # Plate footer: honesty notes above the rule, identity + attribution below it
     partial = (" the final data month is partial and excluded;" if result.final_month_partial else "")
-    p.append(txt(left, p2_bottom + 44,
-                 f"Complete months through {result.last_complete_month};{partial} "
-                 f"stage definitions are documented choices (activity = any invoice in the month; "
-                 f"dormancy threshold {result.config.dormancy_months} months).", 9, _MUTED))
-    p.append(txt(left, p2_bottom + 58,
-                 "'New' is first purchase inside the window - the earliest months conflate truly-new "
-                 "buyers with pre-existing accounts (left-censoring).", 9, _MUTED))
-    p.append(txt(left, p2_bottom + 72,
-                 "Data: UCI Online Retail II (CC BY 4.0) - real transactions; identified customers "
-                 "only; measured, not modelled.", 9, _MUTED))
+    p.extend(_plate.svg_footer(
+        width, height, "lifecycle",
+        notes=(
+            f"Complete months through {result.last_complete_month};{partial} "
+            f"stage definitions are documented choices (activity = any invoice in the month; "
+            f"dormancy threshold {result.config.dormancy_months} months).",
+            "'New' is first purchase inside the window - the earliest months conflate truly-new "
+            "buyers with pre-existing accounts (left-censoring). Identified customers only; "
+            "measured, not modelled.",
+        ),
+    ))
 
     p.append("</svg>")
     return "\n".join(p) + "\n"
+
+
+def _stage_disp(name: str) -> str:
+    return "pre-acquisition" if name == ENTRY else name.replace("_", "-")
+
+
+def _flow_object(result: LifecycleResult, width: float, left: float, title_y: float,
+                 flow_top: float, flow_h: float, flow_bottom: float) -> list[str]:
+    """The stage-transition flow object: labeled nodes + count-labeled ribbons.
+
+    Left column = stage in month m-1 (plus pre-acquisition entries), right
+    column = stage in month m; ribbon width is proportional to customers, all
+    complete month pairs pooled. Identity is carried by position and text on
+    both ends and on every major ribbon -- never by color alone.
+    """
+    flows = result.flows
+    txt = _plate.svg_text
+    src_order = [ENTRY, *STATES]
+    dst_order = list(STATES)
+    node_fill = {**STATE_FILL, ENTRY: _SURFACE}
+
+    total = float(flows.to_numpy().sum())
+    if total <= 0:
+        return []
+    out_sum = {s: float(flows.loc[s].sum()) for s in src_order}
+    in_sum = {t: float(flows[t].sum()) for t in dst_order}
+    n_left = sum(1 for s in src_order if out_sum[s] > 0)
+    gap = 12.0
+    scale = (flow_h - gap * max(n_left - 1, 0)) / total
+
+    x1 = left + 216              # left node column (bars are 12px wide)
+    x2 = width - 260             # right node column
+    mx = (x1 + 12 + x2) / 2      # bezier control x
+
+    p: list[str] = []
+    p.append(txt(left, title_y, "Where each stage's customers land next month", 13, _INK,
+                 weight="700"))
+    p.append(txt(left, title_y + 18, "Aggregate month-to-month stage flows (customers, all "
+                 "complete month pairs). Ribbon width is proportional to customers; every "
+                 "ribbon and node is labeled with its count.", 10, _MUTED))
+    p.append(txt(x1 + 6, flow_top - 8, "stage in month m-1", 10, _INK_2, anchor="middle",
+                 weight="600"))
+    p.append(txt(x2 + 6, flow_top - 8, "stage in month m", 10, _INK_2, anchor="middle",
+                 weight="600"))
+
+    # Node geometry: sources stack on the left, targets on the right.
+    src_y: dict[str, float] = {}
+    y = flow_top
+    for s in src_order:
+        if out_sum[s] <= 0:
+            continue
+        src_y[s] = y
+        y += out_sum[s] * scale + gap
+    dst_y: dict[str, float] = {}
+    y = flow_top
+    for t in dst_order:
+        if in_sum[t] <= 0:
+            continue
+        dst_y[t] = y
+        y += in_sum[t] * scale + gap
+
+    # Ribbons (largest first so small flows stay readable on top). Fill is the
+    # TARGET stage's color as a wash; identity rides on the end labels below.
+    seg_src = dict(src_y)
+    seg_dst = dict(dst_y)
+    ribbons: list[tuple[float, str, str, int]] = []
+    for s in src_order:
+        if s not in src_y:
+            continue
+        for t in dst_order:
+            count = int(flows.loc[s, t])
+            if count <= 0:
+                continue
+            ribbons.append((count * scale, s, t, count))
+    # Segment offsets are assigned in canonical order (deterministic), draw order
+    # is by size; precompute the segment spans first.
+    spans: dict[tuple[str, str], tuple[float, float, float, float]] = {}
+    for s in src_order:
+        if s not in src_y:
+            continue
+        for t in dst_order:
+            count = int(flows.loc[s, t])
+            if count <= 0:
+                continue
+            h = count * scale
+            sy0 = seg_src[s]
+            seg_src[s] = sy0 + h
+            spans[(s, t)] = (sy0, sy0 + h, 0.0, 0.0)
+    for t in dst_order:
+        if t not in dst_y:
+            continue
+        for s in src_order:
+            if (s, t) not in spans:
+                continue
+            sy0, sy1, _a, _b = spans[(s, t)]
+            h = sy1 - sy0
+            ty0 = seg_dst[t]
+            seg_dst[t] = ty0 + h
+            spans[(s, t)] = (sy0, sy1, ty0, ty0 + h)
+    for _h, s, t, _count in sorted(ribbons, key=lambda r: (-r[0], r[1], r[2])):
+        sy0, sy1, ty0, ty1 = spans[(s, t)]
+        fill = STATE_FILL[t]
+        p.append(
+            f'<path d="M{x1 + 12},{sy0:.1f} C{mx:.1f},{sy0:.1f} {mx:.1f},{ty0:.1f} '
+            f'{x2},{ty0:.1f} L{x2},{ty1:.1f} C{mx:.1f},{ty1:.1f} {mx:.1f},{sy1:.1f} '
+            f'{x1 + 12},{sy1:.1f} Z" fill="{fill}" fill-opacity="0.45"/>'
+        )
+
+    # Nodes + end labels (the dependable identity channel).
+    for s, y0 in src_y.items():
+        h = out_sum[s] * scale
+        extra = (f' stroke="{_INK_2}" stroke-width="1"' if s == ENTRY else "")
+        p.append(f'<rect x="{x1}" y="{y0:.1f}" width="12" height="{max(h, 1.0):.1f}" '
+                 f'fill="{node_fill[s]}"{extra}/>')
+        p.append(txt(x1 - 10, y0 + h / 2 + 3.5, f"{_stage_disp(s)} {int(round(out_sum[s])):,}",
+                     10, _INK_2, anchor="end"))
+    for t, y0 in dst_y.items():
+        h = in_sum[t] * scale
+        p.append(f'<rect x="{x2 + 12}" y="{y0:.1f}" width="12" height="{max(h, 1.0):.1f}" '
+                 f'fill="{node_fill[t]}"/>')
+        p.append(txt(x2 + 32, y0 + h / 2 + 3.5, f"{_stage_disp(t)} {int(round(in_sum[t])):,}",
+                     10, _INK_2))
+
+    # Per-ribbon count labels at the target end (halo keeps them legible on any
+    # fill) -- only where the ribbon is tall enough for the text to fit.
+    for (s, t), (_sy0, _sy1, ty0, ty1) in spans.items():
+        if ty1 - ty0 < 13:
+            continue
+        label = "stays" if s == t else f"from {_stage_disp(s)}"
+        count = int(flows.loc[s, t])
+        p.append(
+            f'<text x="{x2 - 8:.1f}" y="{(ty0 + ty1) / 2 + 3:.1f}" font-size="9" '
+            f'fill="{_INK_2}" text-anchor="end" paint-order="stroke" stroke="{_SURFACE}" '
+            f'stroke-width="3">{label} &#183; {count:,}</text>'
+        )
+
+    p.append(txt(left, flow_bottom + 26,
+                 "Impossible pairings (e.g. straight from an active month to dormant, or "
+                 "'retained' after a silent month) are structural zeros of the stage "
+                 "definitions, not observations.", 9, _MUTED))
+    return p
 
 
 def write_svg(result: LifecycleResult, out_dir: Path = FIGURES) -> Path:

@@ -610,17 +610,21 @@ def lorenz_points(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 def fig_clv(result: CLVResult, out_dir=FIGURES):
     """Two-panel committed figure: out-of-sample validation + CLV concentration.
 
-    Deterministic (no timestamps, no RNG): re-running writes the same PNG bytes.
-    Returns None when there is nothing to plot (empty/degenerate input).
+    Plate 12 of the field-notes system. The real-vs-modelled convention is
+    visual: measured marks (actual holdout transactions) are solid ink; model
+    output (predicted bars, the Lorenz curve of *predicted* CLV) is dashed /
+    outline. Deterministic (no timestamps, no RNG): re-running writes the same
+    PNG bytes. Returns None when there is nothing to plot.
     """
-    import matplotlib.pyplot as plt  # noqa: F401  (Agg backend set in retail.eda)
+    import matplotlib.pyplot as plt
 
-    from retail.eda import BLUE, GREEN, INK, INK_2, MUTED, _save, _style
+    from retail import plate
+    from retail.plate import BLUE, INK, INK_2, MODEL_DASH, MUTED, SURFACE
 
     if result.clv_table.empty:
         return None
-    _style()
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.6))
+    plate.style()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 5.0))
 
     # Panel A: predicted vs actual mean holdout transactions, by calibration frequency
     v = result.validation
@@ -629,7 +633,8 @@ def fig_clv(result: CLVResult, out_dir=FIGURES):
         idx = np.arange(len(bf))
         w = 0.4
         ax1.bar(idx - w / 2, bf["actual_mean"], width=w, color=BLUE, label="actual")
-        ax1.bar(idx + w / 2, bf["predicted_mean"], width=w, color=GREEN, label="predicted")
+        ax1.bar(idx + w / 2, bf["predicted_mean"], width=w, facecolor=SURFACE,
+                edgecolor=INK_2, linewidth=1.1, linestyle=MODEL_DASH, label="predicted")
         ax1.set_xticks(idx)
         ax1.set_xticklabels(bf["cal_frequency"])
         ax1.set_xlabel("purchases in calibration period")
@@ -645,10 +650,10 @@ def fig_clv(result: CLVResult, out_dir=FIGURES):
         ax1.axis("off")
         ax1.set_title("Out-of-sample validation unavailable", fontsize=10.5)
 
-    # Panel B: Lorenz curve of predicted CLV
+    # Panel B: Lorenz curve of predicted CLV (model output -> dashed by convention)
     cum_x, cum_y = lorenz_points(result.clv_table["clv"].to_numpy())
-    ax2.plot(100 * cum_x, 100 * cum_y, color=BLUE, linewidth=2)
-    ax2.plot([0, 100], [0, 100], color=MUTED, linewidth=1, linestyle="--")
+    ax2.plot(100 * cum_x, 100 * cum_y, color=BLUE, linewidth=2, linestyle=MODEL_DASH)
+    ax2.plot([0, 100], [0, 100], color=MUTED, linewidth=1, linestyle=":")
     ax2.set_xlabel("share of customers (%, lowest CLV first)")
     ax2.set_ylabel("share of predicted CLV (%)")
     ax2.grid(axis="x", visible=False)
@@ -665,9 +670,10 @@ def fig_clv(result: CLVResult, out_dir=FIGURES):
         f"Predicted {result.horizon_days}-day CLV concentration (Lorenz)", fontsize=10.5
     )
 
+    rect = plate.chrome(fig, "clv", modelled=True)
     fig.suptitle(
         "Customer lifetime value - BG/NBD (frequency) x Gamma-Gamma (value), real transactions",
-        fontsize=12, fontweight="bold", x=0.02, ha="left", color=INK,
+        fontsize=12, fontweight="bold", x=0.045, y=rect[3] - 0.012, ha="left", color=INK,
     )
-    fig.tight_layout(rect=(0, 0.02, 1, 0.94))
-    return _save(fig, out_dir / "clv_validation.png", tight=False)
+    return plate.save(fig, out_dir / "clv_validation.png",
+                      (rect[0], rect[1], rect[2], rect[3] - 0.075))

@@ -1,152 +1,202 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 774" font-family="Segoe UI, Helvetica, Arial, sans-serif" style="background:#fcfcfb">
-<rect x="0" y="0" width="1040" height="774" fill="#fcfcfb"/>
-<text x="74.0" y="34.0" font-size="18" fill="#0b0b0b" font-weight="700">Customer lifecycle - monthly growth accounting</text>
-<text x="74.0" y="55.0" font-size="11" fill="#52514e">Identified customers (n=5,824); every buyer-month is new, retained (bought last month too) or resurrected (back after a gap).</text>
-<text x="74.0" y="72.0" font-size="11" fill="#898781">Churned = bought last month, not this month. Quick ratio = (new + resurrected) / churned; >= 1 means the buyer base grew.</text>
-<line x1="74" y1="241.0" x2="890" y2="241.0" stroke="#e1e0d9" stroke-width="0.7"/>
-<text x="66.0" y="244.5" font-size="9" fill="#898781" text-anchor="end">500</text>
-<line x1="74" y1="194.0" x2="890" y2="194.0" stroke="#e1e0d9" stroke-width="0.7"/>
-<text x="66.0" y="197.5" font-size="9" fill="#898781" text-anchor="end">1,000</text>
-<line x1="74" y1="147.0" x2="890" y2="147.0" stroke="#e1e0d9" stroke-width="0.7"/>
-<text x="66.0" y="150.5" font-size="9" fill="#898781" text-anchor="end">1,500</text>
-<rect x="78" y="198.6" width="26" height="87.4" rx="1.5" fill="#008300"/>
-<rect x="112" y="256.7" width="26" height="29.3" rx="1.5" fill="#2a78d6"/>
-<rect x="112" y="222.1" width="26" height="32.6" rx="1.5" fill="#008300"/>
-<rect x="112" y="290" width="26" height="43.7" rx="1.5" fill="#e87ba4"/>
-<rect x="146" y="263.5" width="26" height="22.5" rx="1.5" fill="#2a78d6"/>
-<rect x="146" y="250.8" width="26" height="10.7" rx="1.5" fill="#eda100"/>
-<rect x="146" y="215.5" width="26" height="33.2" rx="1.5" fill="#008300"/>
-<rect x="146" y="290" width="26" height="30.5" rx="1.5" fill="#e87ba4"/>
-<rect x="180" y="258.7" width="26" height="27.3" rx="1.5" fill="#2a78d6"/>
-<rect x="180" y="230.7" width="26" height="26.0" rx="1.5" fill="#eda100"/>
-<rect x="180" y="189.2" width="26" height="39.4" rx="1.5" fill="#008300"/>
-<rect x="180" y="290" width="26" height="31.9" rx="1.5" fill="#e87ba4"/>
-<rect x="214" y="252.7" width="26" height="33.3" rx="1.5" fill="#2a78d6"/>
-<rect x="214" y="227.4" width="26" height="23.3" rx="1.5" fill="#eda100"/>
-<rect x="214" y="199.8" width="26" height="25.6" rx="1.5" fill="#008300"/>
-<rect x="214" y="290" width="26" height="47.9" rx="1.5" fill="#e87ba4"/>
-<rect x="248" y="255.8" width="26" height="30.2" rx="1.5" fill="#2a78d6"/>
-<rect x="248" y="221.3" width="26" height="32.5" rx="1.5" fill="#eda100"/>
-<rect x="248" y="197.3" width="26" height="22.0" rx="1.5" fill="#008300"/>
-<rect x="248" y="290" width="26" height="42.1" rx="1.5" fill="#e87ba4"/>
-<rect x="282" y="253.5" width="26" height="32.5" rx="1.5" fill="#2a78d6"/>
-<rect x="282" y="215.9" width="26" height="35.6" rx="1.5" fill="#eda100"/>
-<rect x="282" y="190.8" width="26" height="23.1" rx="1.5" fill="#008300"/>
-<rect x="282" y="290" width="26" height="42.2" rx="1.5" fill="#e87ba4"/>
-<rect x="316" y="251.3" width="26" height="34.7" rx="1.5" fill="#2a78d6"/>
-<rect x="316" y="218.6" width="26" height="30.8" rx="1.5" fill="#eda100"/>
-<rect x="316" y="201.2" width="26" height="15.4" rx="1.5" fill="#008300"/>
-<rect x="316" y="290" width="26" height="45.6" rx="1.5" fill="#e87ba4"/>
-<rect x="350" y="255.1" width="26" height="30.9" rx="1.5" fill="#2a78d6"/>
-<rect x="350" y="217.8" width="26" height="35.3" rx="1.5" fill="#eda100"/>
-<rect x="350" y="202.5" width="26" height="13.3" rx="1.5" fill="#008300"/>
-<rect x="350" y="290" width="26" height="40.4" rx="1.5" fill="#e87ba4"/>
-<rect x="384" y="254.0" width="26" height="32.0" rx="1.5" fill="#2a78d6"/>
-<rect x="384" y="203.7" width="26" height="48.3" rx="1.5" fill="#eda100"/>
-<rect x="384" y="181.2" width="26" height="20.5" rx="1.5" fill="#008300"/>
-<rect x="384" y="290" width="26" height="38.5" rx="1.5" fill="#e87ba4"/>
-<rect x="418" y="244.8" width="26" height="41.2" rx="1.5" fill="#2a78d6"/>
-<rect x="418" y="183.0" width="26" height="59.7" rx="1.5" fill="#eda100"/>
-<rect x="418" y="147.8" width="26" height="33.2" rx="1.5" fill="#008300"/>
-<rect x="418" y="290" width="26" height="48.0" rx="1.5" fill="#e87ba4"/>
-<rect x="452" y="226.4" width="26" height="59.6" rx="1.5" fill="#2a78d6"/>
-<rect x="452" y="167.7" width="26" height="56.7" rx="1.5" fill="#eda100"/>
-<rect x="452" y="137.1" width="26" height="28.6" rx="1.5" fill="#008300"/>
-<rect x="452" y="290" width="26" height="59.9" rx="1.5" fill="#e87ba4"/>
-<rect x="486" y="238.8" width="26" height="47.2" rx="1.5" fill="#2a78d6"/>
-<rect x="486" y="212.1" width="26" height="24.7" rx="1.5" fill="#eda100"/>
-<rect x="486" y="204.9" width="26" height="5.1" rx="1.5" fill="#008300"/>
-<rect x="486" y="290" width="26" height="78.0" rx="1.5" fill="#e87ba4"/>
-<rect x="520" y="257.6" width="26" height="28.4" rx="1.5" fill="#2a78d6"/>
-<rect x="520" y="225.3" width="26" height="30.3" rx="1.5" fill="#eda100"/>
-<rect x="520" y="218.6" width="26" height="4.8" rx="1.5" fill="#008300"/>
-<rect x="520" y="290" width="26" height="39.5" rx="1.5" fill="#e87ba4"/>
-<rect x="554" y="263.6" width="26" height="22.4" rx="1.5" fill="#2a78d6"/>
-<rect x="554" y="228.6" width="26" height="33.0" rx="1.5" fill="#eda100"/>
-<rect x="554" y="216.9" width="26" height="9.7" rx="1.5" fill="#008300"/>
-<rect x="554" y="290" width="26" height="33.4" rx="1.5" fill="#e87ba4"/>
-<rect x="588" y="260.7" width="26" height="25.3" rx="1.5" fill="#2a78d6"/>
-<rect x="588" y="213.4" width="26" height="45.4" rx="1.5" fill="#eda100"/>
-<rect x="588" y="196.6" width="26" height="14.8" rx="1.5" fill="#008300"/>
-<rect x="588" y="290" width="26" height="32.5" rx="1.5" fill="#e87ba4"/>
-<rect x="622" y="259.7" width="26" height="26.3" rx="1.5" fill="#2a78d6"/>
-<rect x="622" y="217.8" width="26" height="39.9" rx="1.5" fill="#eda100"/>
-<rect x="622" y="207.8" width="26" height="8.0" rx="1.5" fill="#008300"/>
-<rect x="622" y="290" width="26" height="47.7" rx="1.5" fill="#e87ba4"/>
-<rect x="656" y="253.6" width="26" height="32.4" rx="1.5" fill="#2a78d6"/>
-<rect x="656" y="199.4" width="26" height="52.2" rx="1.5" fill="#eda100"/>
-<rect x="656" y="188.9" width="26" height="8.4" rx="1.5" fill="#008300"/>
-<rect x="656" y="290" width="26" height="34.0" rx="1.5" fill="#e87ba4"/>
-<rect x="690" y="249.5" width="26" height="36.5" rx="1.5" fill="#2a78d6"/>
-<rect x="690" y="205.1" width="26" height="42.4" rx="1.5" fill="#eda100"/>
-<rect x="690" y="195.0" width="26" height="8.1" rx="1.5" fill="#008300"/>
-<rect x="690" y="290" width="26" height="45.6" rx="1.5" fill="#e87ba4"/>
-<rect x="724" y="253.7" width="26" height="32.3" rx="1.5" fill="#2a78d6"/>
-<rect x="724" y="208.6" width="26" height="43.1" rx="1.5" fill="#eda100"/>
-<rect x="724" y="199.1" width="26" height="7.5" rx="1.5" fill="#008300"/>
-<rect x="724" y="290" width="26" height="44.2" rx="1.5" fill="#e87ba4"/>
-<rect x="758" y="251.7" width="26" height="34.3" rx="1.5" fill="#2a78d6"/>
-<rect x="758" y="210.4" width="26" height="39.3" rx="1.5" fill="#eda100"/>
-<rect x="758" y="200.3" width="26" height="8.1" rx="1.5" fill="#008300"/>
-<rect x="758" y="290" width="26" height="39.4" rx="1.5" fill="#e87ba4"/>
-<rect x="792" y="248.2" width="26" height="37.8" rx="1.5" fill="#2a78d6"/>
-<rect x="792" y="187.4" width="26" height="58.9" rx="1.5" fill="#eda100"/>
-<rect x="792" y="169.7" width="26" height="15.7" rx="1.5" fill="#008300"/>
-<rect x="792" y="290" width="26" height="35.7" rx="1.5" fill="#e87ba4"/>
-<rect x="826" y="242.2" width="26" height="43.8" rx="1.5" fill="#2a78d6"/>
-<rect x="826" y="180.9" width="26" height="59.4" rx="1.5" fill="#eda100"/>
-<rect x="826" y="160.1" width="26" height="18.8" rx="1.5" fill="#008300"/>
-<rect x="826" y="290" width="26" height="55.1" rx="1.5" fill="#e87ba4"/>
-<rect x="860" y="230.1" width="26" height="55.9" rx="1.5" fill="#2a78d6"/>
-<rect x="860" y="149.9" width="26" height="78.2" rx="1.5" fill="#eda100"/>
-<rect x="860" y="132.0" width="26" height="15.9" rx="1.5" fill="#008300"/>
-<rect x="860" y="290" width="26" height="53.1" rx="1.5" fill="#e87ba4"/>
-<line x1="74" y1="288" x2="890" y2="288" stroke="#898781" stroke-width="1"/>
-<text x="91.0" y="394.0" font-size="8.5" fill="#898781" text-anchor="middle">2009-12</text>
-<text x="193.0" y="394.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-03</text>
-<text x="295.0" y="394.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-06</text>
-<text x="397.0" y="394.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-09</text>
-<text x="499.0" y="394.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-12</text>
-<text x="601.0" y="394.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-03</text>
-<text x="703.0" y="394.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-06</text>
-<text x="805.0" y="394.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-09</text>
-<text x="873.0" y="126.0" font-size="10" fill="#0b0b0b" text-anchor="middle" font-weight="700">1,660 active</text>
-<text x="873.0" y="357.1" font-size="9.5" fill="#52514e" text-anchor="middle">745 churned</text>
-<rect x="74" y="409" width="10" height="10" rx="2" fill="#008300"/>
-<text x="89.0" y="418.0" font-size="10" fill="#52514e">new</text>
-<rect x="136.6" y="409" width="10" height="10" rx="2" fill="#2a78d6"/>
-<text x="151.6" y="418.0" font-size="10" fill="#52514e">retained</text>
-<rect x="235.2" y="409" width="10" height="10" rx="2" fill="#eda100"/>
-<text x="250.2" y="418.0" font-size="10" fill="#52514e">resurrected</text>
-<rect x="355.4" y="409" width="10" height="10" rx="2" fill="#e87ba4"/>
-<text x="370.4" y="418.0" font-size="10" fill="#52514e">churned (below axis)</text>
-<text x="74.0" y="440.0" font-size="10.5" fill="#52514e">Mean month: 1,041 active = 212 new + 390 retained + 439 resurrected; 620 churn out. Overall quick ratio 1.05 (&#8805;1 in 13 of 23 months).</text>
-<text x="74.0" y="474.0" font-size="13" fill="#0b0b0b" font-weight="700">Where the acquired base sits each month</text>
-<text x="74.0" y="492.0" font-size="10" fill="#898781">All customers acquired by each month, stacked by stage. Neutral bands are the inactive stages; dormant = silent for more than 3 months (documented choice).</text>
-<line x1="74" y1="623.7" x2="890" y2="623.7" stroke="#e1e0d9" stroke-width="0.7"/>
-<line x1="74" y1="569.5" x2="890" y2="569.5" stroke="#e1e0d9" stroke-width="0.7"/>
-<polygon points="91.0,678.0 125.0,669.0 159.0,670.9 193.0,669.5 227.0,667.8 261.0,668.7 295.0,668.0 329.0,667.4 363.0,668.5 397.0,668.2 431.0,665.5 465.0,660.2 499.0,663.8 533.0,669.2 567.0,670.9 601.0,670.1 635.0,669.8 669.0,668.1 703.0,666.9 737.0,668.1 771.0,667.5 805.0,666.5 839.0,664.8 873.0,661.3 873.0,678.0 839.0,678.0 805.0,678.0 771.0,678.0 737.0,678.0 703.0,678.0 669.0,678.0 635.0,678.0 601.0,678.0 567.0,678.0 533.0,678.0 499.0,678.0 465.0,678.0 431.0,678.0 397.0,678.0 363.0,678.0 329.0,678.0 295.0,678.0 261.0,678.0 227.0,678.0 193.0,678.0 159.0,678.0 125.0,678.0 91.0,678.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<polygon points="91.0,678.0 125.0,669.0 159.0,667.3 193.0,661.5 227.0,660.5 261.0,658.7 295.0,657.2 329.0,658.0 363.0,657.7 397.0,653.7 431.0,647.7 465.0,643.3 499.0,656.1 533.0,659.9 567.0,660.9 601.0,656.5 635.0,657.7 669.0,652.4 703.0,654.1 737.0,655.1 771.0,655.6 805.0,648.9 839.0,647.1 873.0,638.1 873.0,661.3 839.0,664.8 805.0,666.5 771.0,667.5 737.0,668.1 703.0,666.9 669.0,668.1 635.0,669.8 601.0,670.1 567.0,670.9 533.0,669.2 499.0,663.8 465.0,660.2 431.0,665.5 397.0,668.2 363.0,668.5 329.0,667.4 295.0,668.0 261.0,668.7 227.0,667.8 193.0,669.5 159.0,670.9 125.0,669.0 91.0,678.0" fill="#eda100" stroke="#fcfcfb" stroke-width="2"/>
-<polygon points="91.0,652.2 125.0,659.0 159.0,657.1 193.0,649.5 227.0,652.5 261.0,651.8 295.0,649.9 329.0,652.9 363.0,653.3 397.0,647.2 431.0,637.5 465.0,634.4 499.0,654.0 533.0,658.0 567.0,657.5 601.0,651.6 635.0,654.9 669.0,649.4 703.0,651.1 737.0,652.3 771.0,652.7 805.0,643.8 839.0,641.1 873.0,633.0 873.0,638.1 839.0,647.1 805.0,648.9 771.0,655.6 737.0,655.1 703.0,654.1 669.0,652.4 635.0,657.7 601.0,656.5 567.0,660.9 533.0,659.9 499.0,656.1 465.0,643.3 431.0,647.7 397.0,653.7 363.0,657.7 329.0,658.0 295.0,657.2 261.0,658.7 227.0,660.5 193.0,661.5 159.0,667.3 125.0,669.0 91.0,678.0" fill="#008300" stroke="#fcfcfb" stroke-width="2"/>
-<polygon points="91.0,652.2 125.0,642.2 159.0,632.0 193.0,620.1 227.0,619.9 261.0,616.1 295.0,612.4 329.0,614.7 363.0,615.4 397.0,612.9 431.0,603.3 465.0,593.5 499.0,595.3 533.0,601.2 567.0,610.4 601.0,620.2 635.0,620.1 669.0,617.1 703.0,614.5 737.0,615.6 771.0,615.5 805.0,610.9 839.0,603.7 873.0,594.5 873.0,633.0 839.0,641.1 805.0,643.8 771.0,652.7 737.0,652.3 703.0,651.1 669.0,649.4 635.0,654.9 601.0,651.6 567.0,657.5 533.0,658.0 499.0,654.0 465.0,634.4 431.0,637.5 397.0,647.2 363.0,653.3 329.0,652.9 295.0,649.9 261.0,651.8 227.0,652.5 193.0,649.5 159.0,657.1 125.0,659.0 91.0,652.2" fill="#b4b2a9" stroke="#fcfcfb" stroke-width="2"/>
-<polygon points="91.0,652.2 125.0,642.2 159.0,632.0 193.0,620.1 227.0,612.1 261.0,605.2 295.0,597.9 329.0,592.9 363.0,588.5 397.0,582.0 431.0,571.8 465.0,563.0 499.0,560.9 533.0,559.0 567.0,555.6 601.0,550.7 635.0,547.9 669.0,544.9 703.0,541.9 737.0,539.2 771.0,536.3 805.0,531.2 839.0,525.2 873.0,520.0 873.0,594.5 839.0,603.7 805.0,610.9 771.0,615.5 737.0,615.6 703.0,614.5 669.0,617.1 635.0,620.1 601.0,620.2 567.0,610.4 533.0,601.2 499.0,595.3 465.0,593.5 431.0,603.3 397.0,612.9 363.0,615.4 329.0,614.7 295.0,612.4 261.0,616.1 227.0,619.9 193.0,620.1 159.0,632.0 125.0,642.2 91.0,652.2" fill="#dcdbd3" stroke="#fcfcfb" stroke-width="2"/>
-<text x="66.0" y="627.2" font-size="9" fill="#898781" text-anchor="end">2,000</text>
-<text x="66.0" y="573.0" font-size="9" fill="#898781" text-anchor="end">4,000</text>
-<line x1="74" y1="678" x2="890" y2="678" stroke="#898781" stroke-width="1"/>
-<text x="91.0" y="694.0" font-size="8.5" fill="#898781" text-anchor="middle">2009-12</text>
-<text x="193.0" y="694.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-03</text>
-<text x="295.0" y="694.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-06</text>
-<text x="397.0" y="694.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-09</text>
-<text x="499.0" y="694.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-12</text>
-<text x="601.0" y="694.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-03</text>
-<text x="703.0" y="694.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-06</text>
-<text x="805.0" y="694.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-09</text>
-<text x="900.0" y="673.1" font-size="10" fill="#52514e">retained 616</text>
-<text x="900.0" y="653.2" font-size="10" fill="#52514e">resurrected 853</text>
-<text x="900.0" y="639.1" font-size="10" fill="#52514e">new 191</text>
-<text x="900.0" y="617.2" font-size="10" fill="#52514e">at-risk 1,418</text>
-<text x="900.0" y="560.7" font-size="10" fill="#52514e">dormant 2,746</text>
-<text x="74.0" y="722.0" font-size="9" fill="#898781">Complete months through 2011-11; the final data month is partial and excluded; stage definitions are documented choices (activity = any invoice in the month; dormancy threshold 3 months).</text>
-<text x="74.0" y="736.0" font-size="9" fill="#898781">'New' is first purchase inside the window - the earliest months conflate truly-new buyers with pre-existing accounts (left-censoring).</text>
-<text x="74.0" y="750.0" font-size="9" fill="#898781">Data: UCI Online Retail II (CC BY 4.0) - real transactions; identified customers only; measured, not modelled.</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 1298" font-family="Segoe UI, Helvetica, Arial, sans-serif" style="background:#fcfcfb">
+<rect x="0" y="0" width="1040" height="1298" fill="#fcfcfb"/>
+<text x="42.0" y="30.0" font-size="10" fill="#898781" letter-spacing="2.5">FIELD NOTES · ONLINE RETAIL II</text>
+<text x="998.0" y="30.0" font-size="10" fill="#0b0b0b" text-anchor="end" font-weight="700" letter-spacing="2.5">PLATE 11</text>
+<line x1="42" y1="44" x2="998" y2="44" stroke="#e1e0d9" stroke-width="1"/>
+<text x="74.0" y="94.0" font-size="19" fill="#0b0b0b" font-weight="700">Customer lifecycle - monthly growth accounting</text>
+<text x="74.0" y="116.0" font-size="11" fill="#52514e">Identified customers (n=5,824); every buyer-month is new, retained (bought last month too) or resurrected (back after a gap).</text>
+<text x="74.0" y="133.0" font-size="11" fill="#898781">Churned = bought last month, not this month. Quick ratio = (new + resurrected) / churned; >= 1 means the buyer base grew.</text>
+<line x1="74" y1="293.0" x2="890" y2="293.0" stroke="#e1e0d9" stroke-width="0.7"/>
+<text x="66.0" y="296.5" font-size="9" fill="#898781" text-anchor="end">500</text>
+<line x1="74" y1="246.0" x2="890" y2="246.0" stroke="#e1e0d9" stroke-width="0.7"/>
+<text x="66.0" y="249.5" font-size="9" fill="#898781" text-anchor="end">1,000</text>
+<line x1="74" y1="199.0" x2="890" y2="199.0" stroke="#e1e0d9" stroke-width="0.7"/>
+<text x="66.0" y="202.5" font-size="9" fill="#898781" text-anchor="end">1,500</text>
+<rect x="78" y="250.6" width="26" height="87.4" rx="1.5" fill="#008300"/>
+<rect x="112" y="308.7" width="26" height="29.3" rx="1.5" fill="#2a78d6"/>
+<rect x="112" y="274.1" width="26" height="32.6" rx="1.5" fill="#008300"/>
+<rect x="112" y="342" width="26" height="43.7" rx="1.5" fill="#e87ba4"/>
+<rect x="146" y="315.5" width="26" height="22.5" rx="1.5" fill="#2a78d6"/>
+<rect x="146" y="302.8" width="26" height="10.7" rx="1.5" fill="#eda100"/>
+<rect x="146" y="267.5" width="26" height="33.2" rx="1.5" fill="#008300"/>
+<rect x="146" y="342" width="26" height="30.5" rx="1.5" fill="#e87ba4"/>
+<rect x="180" y="310.7" width="26" height="27.3" rx="1.5" fill="#2a78d6"/>
+<rect x="180" y="282.7" width="26" height="26.0" rx="1.5" fill="#eda100"/>
+<rect x="180" y="241.2" width="26" height="39.4" rx="1.5" fill="#008300"/>
+<rect x="180" y="342" width="26" height="31.9" rx="1.5" fill="#e87ba4"/>
+<rect x="214" y="304.7" width="26" height="33.3" rx="1.5" fill="#2a78d6"/>
+<rect x="214" y="279.4" width="26" height="23.3" rx="1.5" fill="#eda100"/>
+<rect x="214" y="251.8" width="26" height="25.6" rx="1.5" fill="#008300"/>
+<rect x="214" y="342" width="26" height="47.9" rx="1.5" fill="#e87ba4"/>
+<rect x="248" y="307.8" width="26" height="30.2" rx="1.5" fill="#2a78d6"/>
+<rect x="248" y="273.3" width="26" height="32.5" rx="1.5" fill="#eda100"/>
+<rect x="248" y="249.3" width="26" height="22.0" rx="1.5" fill="#008300"/>
+<rect x="248" y="342" width="26" height="42.1" rx="1.5" fill="#e87ba4"/>
+<rect x="282" y="305.5" width="26" height="32.5" rx="1.5" fill="#2a78d6"/>
+<rect x="282" y="267.9" width="26" height="35.6" rx="1.5" fill="#eda100"/>
+<rect x="282" y="242.8" width="26" height="23.1" rx="1.5" fill="#008300"/>
+<rect x="282" y="342" width="26" height="42.2" rx="1.5" fill="#e87ba4"/>
+<rect x="316" y="303.3" width="26" height="34.7" rx="1.5" fill="#2a78d6"/>
+<rect x="316" y="270.6" width="26" height="30.8" rx="1.5" fill="#eda100"/>
+<rect x="316" y="253.2" width="26" height="15.4" rx="1.5" fill="#008300"/>
+<rect x="316" y="342" width="26" height="45.6" rx="1.5" fill="#e87ba4"/>
+<rect x="350" y="307.1" width="26" height="30.9" rx="1.5" fill="#2a78d6"/>
+<rect x="350" y="269.8" width="26" height="35.3" rx="1.5" fill="#eda100"/>
+<rect x="350" y="254.5" width="26" height="13.3" rx="1.5" fill="#008300"/>
+<rect x="350" y="342" width="26" height="40.4" rx="1.5" fill="#e87ba4"/>
+<rect x="384" y="306.0" width="26" height="32.0" rx="1.5" fill="#2a78d6"/>
+<rect x="384" y="255.7" width="26" height="48.3" rx="1.5" fill="#eda100"/>
+<rect x="384" y="233.2" width="26" height="20.5" rx="1.5" fill="#008300"/>
+<rect x="384" y="342" width="26" height="38.5" rx="1.5" fill="#e87ba4"/>
+<rect x="418" y="296.8" width="26" height="41.2" rx="1.5" fill="#2a78d6"/>
+<rect x="418" y="235.0" width="26" height="59.7" rx="1.5" fill="#eda100"/>
+<rect x="418" y="199.8" width="26" height="33.2" rx="1.5" fill="#008300"/>
+<rect x="418" y="342" width="26" height="48.0" rx="1.5" fill="#e87ba4"/>
+<rect x="452" y="278.4" width="26" height="59.6" rx="1.5" fill="#2a78d6"/>
+<rect x="452" y="219.7" width="26" height="56.7" rx="1.5" fill="#eda100"/>
+<rect x="452" y="189.1" width="26" height="28.6" rx="1.5" fill="#008300"/>
+<rect x="452" y="342" width="26" height="59.9" rx="1.5" fill="#e87ba4"/>
+<rect x="486" y="290.8" width="26" height="47.2" rx="1.5" fill="#2a78d6"/>
+<rect x="486" y="264.1" width="26" height="24.7" rx="1.5" fill="#eda100"/>
+<rect x="486" y="256.9" width="26" height="5.1" rx="1.5" fill="#008300"/>
+<rect x="486" y="342" width="26" height="78.0" rx="1.5" fill="#e87ba4"/>
+<rect x="520" y="309.6" width="26" height="28.4" rx="1.5" fill="#2a78d6"/>
+<rect x="520" y="277.3" width="26" height="30.3" rx="1.5" fill="#eda100"/>
+<rect x="520" y="270.6" width="26" height="4.8" rx="1.5" fill="#008300"/>
+<rect x="520" y="342" width="26" height="39.5" rx="1.5" fill="#e87ba4"/>
+<rect x="554" y="315.6" width="26" height="22.4" rx="1.5" fill="#2a78d6"/>
+<rect x="554" y="280.6" width="26" height="33.0" rx="1.5" fill="#eda100"/>
+<rect x="554" y="268.9" width="26" height="9.7" rx="1.5" fill="#008300"/>
+<rect x="554" y="342" width="26" height="33.4" rx="1.5" fill="#e87ba4"/>
+<rect x="588" y="312.7" width="26" height="25.3" rx="1.5" fill="#2a78d6"/>
+<rect x="588" y="265.4" width="26" height="45.4" rx="1.5" fill="#eda100"/>
+<rect x="588" y="248.6" width="26" height="14.8" rx="1.5" fill="#008300"/>
+<rect x="588" y="342" width="26" height="32.5" rx="1.5" fill="#e87ba4"/>
+<rect x="622" y="311.7" width="26" height="26.3" rx="1.5" fill="#2a78d6"/>
+<rect x="622" y="269.8" width="26" height="39.9" rx="1.5" fill="#eda100"/>
+<rect x="622" y="259.8" width="26" height="8.0" rx="1.5" fill="#008300"/>
+<rect x="622" y="342" width="26" height="47.7" rx="1.5" fill="#e87ba4"/>
+<rect x="656" y="305.6" width="26" height="32.4" rx="1.5" fill="#2a78d6"/>
+<rect x="656" y="251.4" width="26" height="52.2" rx="1.5" fill="#eda100"/>
+<rect x="656" y="240.9" width="26" height="8.4" rx="1.5" fill="#008300"/>
+<rect x="656" y="342" width="26" height="34.0" rx="1.5" fill="#e87ba4"/>
+<rect x="690" y="301.5" width="26" height="36.5" rx="1.5" fill="#2a78d6"/>
+<rect x="690" y="257.1" width="26" height="42.4" rx="1.5" fill="#eda100"/>
+<rect x="690" y="247.0" width="26" height="8.1" rx="1.5" fill="#008300"/>
+<rect x="690" y="342" width="26" height="45.6" rx="1.5" fill="#e87ba4"/>
+<rect x="724" y="305.7" width="26" height="32.3" rx="1.5" fill="#2a78d6"/>
+<rect x="724" y="260.6" width="26" height="43.1" rx="1.5" fill="#eda100"/>
+<rect x="724" y="251.1" width="26" height="7.5" rx="1.5" fill="#008300"/>
+<rect x="724" y="342" width="26" height="44.2" rx="1.5" fill="#e87ba4"/>
+<rect x="758" y="303.7" width="26" height="34.3" rx="1.5" fill="#2a78d6"/>
+<rect x="758" y="262.4" width="26" height="39.3" rx="1.5" fill="#eda100"/>
+<rect x="758" y="252.3" width="26" height="8.1" rx="1.5" fill="#008300"/>
+<rect x="758" y="342" width="26" height="39.4" rx="1.5" fill="#e87ba4"/>
+<rect x="792" y="300.2" width="26" height="37.8" rx="1.5" fill="#2a78d6"/>
+<rect x="792" y="239.4" width="26" height="58.9" rx="1.5" fill="#eda100"/>
+<rect x="792" y="221.7" width="26" height="15.7" rx="1.5" fill="#008300"/>
+<rect x="792" y="342" width="26" height="35.7" rx="1.5" fill="#e87ba4"/>
+<rect x="826" y="294.2" width="26" height="43.8" rx="1.5" fill="#2a78d6"/>
+<rect x="826" y="232.9" width="26" height="59.4" rx="1.5" fill="#eda100"/>
+<rect x="826" y="212.1" width="26" height="18.8" rx="1.5" fill="#008300"/>
+<rect x="826" y="342" width="26" height="55.1" rx="1.5" fill="#e87ba4"/>
+<rect x="860" y="282.1" width="26" height="55.9" rx="1.5" fill="#2a78d6"/>
+<rect x="860" y="201.9" width="26" height="78.2" rx="1.5" fill="#eda100"/>
+<rect x="860" y="184.0" width="26" height="15.9" rx="1.5" fill="#008300"/>
+<rect x="860" y="342" width="26" height="53.1" rx="1.5" fill="#e87ba4"/>
+<line x1="74" y1="340" x2="890" y2="340" stroke="#898781" stroke-width="1"/>
+<text x="91.0" y="446.0" font-size="8.5" fill="#898781" text-anchor="middle">2009-12</text>
+<text x="193.0" y="446.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-03</text>
+<text x="295.0" y="446.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-06</text>
+<text x="397.0" y="446.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-09</text>
+<text x="499.0" y="446.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-12</text>
+<text x="601.0" y="446.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-03</text>
+<text x="703.0" y="446.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-06</text>
+<text x="805.0" y="446.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-09</text>
+<text x="873.0" y="178.0" font-size="10" fill="#0b0b0b" text-anchor="middle" font-weight="700">1,660 active</text>
+<text x="873.0" y="409.1" font-size="9.5" fill="#52514e" text-anchor="middle">745 churned</text>
+<rect x="74" y="461" width="10" height="10" rx="2" fill="#008300"/>
+<text x="89.0" y="470.0" font-size="10" fill="#52514e">new</text>
+<rect x="136.6" y="461" width="10" height="10" rx="2" fill="#2a78d6"/>
+<text x="151.6" y="470.0" font-size="10" fill="#52514e">retained</text>
+<rect x="235.2" y="461" width="10" height="10" rx="2" fill="#eda100"/>
+<text x="250.2" y="470.0" font-size="10" fill="#52514e">resurrected</text>
+<rect x="355.4" y="461" width="10" height="10" rx="2" fill="#e87ba4"/>
+<text x="370.4" y="470.0" font-size="10" fill="#52514e">churned (below axis)</text>
+<text x="74.0" y="492.0" font-size="10.5" fill="#52514e">Mean month: 1,041 active = 212 new + 390 retained + 439 resurrected; 620 churn out. Overall quick ratio 1.05 (&#8805;1 in 13 of 23 months).</text>
+<text x="74.0" y="526.0" font-size="13" fill="#0b0b0b" font-weight="700">Where the acquired base sits each month</text>
+<text x="74.0" y="544.0" font-size="10" fill="#898781">All customers acquired by each month, stacked by stage. Neutral bands are the inactive stages; dormant = silent for more than 3 months (documented choice).</text>
+<line x1="74" y1="675.7" x2="890" y2="675.7" stroke="#e1e0d9" stroke-width="0.7"/>
+<line x1="74" y1="621.5" x2="890" y2="621.5" stroke="#e1e0d9" stroke-width="0.7"/>
+<polygon points="91.0,730.0 125.0,721.0 159.0,722.9 193.0,721.5 227.0,719.8 261.0,720.7 295.0,720.0 329.0,719.4 363.0,720.5 397.0,720.2 431.0,717.5 465.0,712.2 499.0,715.8 533.0,721.2 567.0,722.9 601.0,722.1 635.0,721.8 669.0,720.1 703.0,718.9 737.0,720.1 771.0,719.5 805.0,718.5 839.0,716.8 873.0,713.3 873.0,730.0 839.0,730.0 805.0,730.0 771.0,730.0 737.0,730.0 703.0,730.0 669.0,730.0 635.0,730.0 601.0,730.0 567.0,730.0 533.0,730.0 499.0,730.0 465.0,730.0 431.0,730.0 397.0,730.0 363.0,730.0 329.0,730.0 295.0,730.0 261.0,730.0 227.0,730.0 193.0,730.0 159.0,730.0 125.0,730.0 91.0,730.0" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<polygon points="91.0,730.0 125.0,721.0 159.0,719.3 193.0,713.5 227.0,712.5 261.0,710.7 295.0,709.2 329.0,710.0 363.0,709.7 397.0,705.7 431.0,699.7 465.0,695.3 499.0,708.1 533.0,711.9 567.0,712.9 601.0,708.5 635.0,709.7 669.0,704.4 703.0,706.1 737.0,707.1 771.0,707.6 805.0,700.9 839.0,699.1 873.0,690.1 873.0,713.3 839.0,716.8 805.0,718.5 771.0,719.5 737.0,720.1 703.0,718.9 669.0,720.1 635.0,721.8 601.0,722.1 567.0,722.9 533.0,721.2 499.0,715.8 465.0,712.2 431.0,717.5 397.0,720.2 363.0,720.5 329.0,719.4 295.0,720.0 261.0,720.7 227.0,719.8 193.0,721.5 159.0,722.9 125.0,721.0 91.0,730.0" fill="#eda100" stroke="#fcfcfb" stroke-width="2"/>
+<polygon points="91.0,704.2 125.0,711.0 159.0,709.1 193.0,701.5 227.0,704.5 261.0,703.8 295.0,701.9 329.0,704.9 363.0,705.3 397.0,699.2 431.0,689.5 465.0,686.4 499.0,706.0 533.0,710.0 567.0,709.5 601.0,703.6 635.0,706.9 669.0,701.4 703.0,703.1 737.0,704.3 771.0,704.7 805.0,695.8 839.0,693.1 873.0,685.0 873.0,690.1 839.0,699.1 805.0,700.9 771.0,707.6 737.0,707.1 703.0,706.1 669.0,704.4 635.0,709.7 601.0,708.5 567.0,712.9 533.0,711.9 499.0,708.1 465.0,695.3 431.0,699.7 397.0,705.7 363.0,709.7 329.0,710.0 295.0,709.2 261.0,710.7 227.0,712.5 193.0,713.5 159.0,719.3 125.0,721.0 91.0,730.0" fill="#008300" stroke="#fcfcfb" stroke-width="2"/>
+<polygon points="91.0,704.2 125.0,694.2 159.0,684.0 193.0,672.1 227.0,671.9 261.0,668.1 295.0,664.4 329.0,666.7 363.0,667.4 397.0,664.9 431.0,655.3 465.0,645.5 499.0,647.3 533.0,653.2 567.0,662.4 601.0,672.2 635.0,672.1 669.0,669.1 703.0,666.5 737.0,667.6 771.0,667.5 805.0,662.9 839.0,655.7 873.0,646.5 873.0,685.0 839.0,693.1 805.0,695.8 771.0,704.7 737.0,704.3 703.0,703.1 669.0,701.4 635.0,706.9 601.0,703.6 567.0,709.5 533.0,710.0 499.0,706.0 465.0,686.4 431.0,689.5 397.0,699.2 363.0,705.3 329.0,704.9 295.0,701.9 261.0,703.8 227.0,704.5 193.0,701.5 159.0,709.1 125.0,711.0 91.0,704.2" fill="#b4b2a9" stroke="#fcfcfb" stroke-width="2"/>
+<polygon points="91.0,704.2 125.0,694.2 159.0,684.0 193.0,672.1 227.0,664.1 261.0,657.2 295.0,649.9 329.0,644.9 363.0,640.5 397.0,634.0 431.0,623.8 465.0,615.0 499.0,612.9 533.0,611.0 567.0,607.6 601.0,602.7 635.0,599.9 669.0,596.9 703.0,593.9 737.0,591.2 771.0,588.3 805.0,583.2 839.0,577.2 873.0,572.0 873.0,646.5 839.0,655.7 805.0,662.9 771.0,667.5 737.0,667.6 703.0,666.5 669.0,669.1 635.0,672.1 601.0,672.2 567.0,662.4 533.0,653.2 499.0,647.3 465.0,645.5 431.0,655.3 397.0,664.9 363.0,667.4 329.0,666.7 295.0,664.4 261.0,668.1 227.0,671.9 193.0,672.1 159.0,684.0 125.0,694.2 91.0,704.2" fill="#dcdbd3" stroke="#fcfcfb" stroke-width="2"/>
+<text x="66.0" y="679.2" font-size="9" fill="#898781" text-anchor="end">2,000</text>
+<text x="66.0" y="625.0" font-size="9" fill="#898781" text-anchor="end">4,000</text>
+<line x1="74" y1="730" x2="890" y2="730" stroke="#898781" stroke-width="1"/>
+<text x="91.0" y="746.0" font-size="8.5" fill="#898781" text-anchor="middle">2009-12</text>
+<text x="193.0" y="746.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-03</text>
+<text x="295.0" y="746.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-06</text>
+<text x="397.0" y="746.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-09</text>
+<text x="499.0" y="746.0" font-size="8.5" fill="#898781" text-anchor="middle">2010-12</text>
+<text x="601.0" y="746.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-03</text>
+<text x="703.0" y="746.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-06</text>
+<text x="805.0" y="746.0" font-size="8.5" fill="#898781" text-anchor="middle">2011-09</text>
+<text x="900.0" y="725.1" font-size="10" fill="#52514e">retained 616</text>
+<text x="900.0" y="705.2" font-size="10" fill="#52514e">resurrected 853</text>
+<text x="900.0" y="691.1" font-size="10" fill="#52514e">new 191</text>
+<text x="900.0" y="669.2" font-size="10" fill="#52514e">at-risk 1,418</text>
+<text x="900.0" y="612.7" font-size="10" fill="#52514e">dormant 2,746</text>
+<text x="74.0" y="796.0" font-size="13" fill="#0b0b0b" font-weight="700">Where each stage's customers land next month</text>
+<text x="74.0" y="814.0" font-size="10" fill="#898781">Aggregate month-to-month stage flows (customers, all complete month pairs). Ribbon width is proportional to customers; every ribbon and node is labeled with its count.</text>
+<text x="296.0" y="844.0" font-size="10" fill="#52514e" text-anchor="middle" font-weight="600">stage in month m-1</text>
+<text x="786.0" y="844.0" font-size="10" fill="#52514e" text-anchor="middle" font-weight="600">stage in month m</text>
+<path d="M302,1071.8 C541.0,1071.8 541.0,1059.8 780,1059.8 L780,1140.0 C541.0,1140.0 541.0,1152.0 302,1152.0 Z" fill="#dcdbd3" fill-opacity="0.45"/>
+<path d="M302,992.8 C541.0,992.8 541.0,988.6 780,988.6 L780,1032.8 C541.0,1032.8 541.0,1037.0 302,1037.0 Z" fill="#b4b2a9" fill-opacity="0.45"/>
+<path d="M302,974.0 C541.0,974.0 541.0,912.4 780,912.4 L780,931.2 C541.0,931.2 541.0,992.8 302,992.8 Z" fill="#eda100" fill-opacity="0.45"/>
+<path d="M302,944.7 C541.0,944.7 541.0,971.3 780,971.3 L780,988.6 C541.0,988.6 541.0,962.0 302,962.0 Z" fill="#b4b2a9" fill-opacity="0.45"/>
+<path d="M302,1037.0 C541.0,1037.0 541.0,1044.8 780,1044.8 L780,1059.8 C541.0,1059.8 541.0,1052.0 302,1052.0 Z" fill="#dcdbd3" fill-opacity="0.45"/>
+<path d="M302,903.7 C541.0,903.7 541.0,880.3 780,880.3 L780,893.3 C541.0,893.3 541.0,916.7 302,916.7 Z" fill="#2a78d6" fill-opacity="0.45"/>
+<path d="M302,852.0 C541.0,852.0 541.0,852.0 780,852.0 L780,864.8 C541.0,864.8 541.0,864.8 302,864.8 Z" fill="#008300" fill-opacity="0.45"/>
+<path d="M302,880.3 C541.0,880.3 541.0,951.0 780,951.0 L780,962.4 C541.0,962.4 541.0,891.7 302,891.7 Z" fill="#b4b2a9" fill-opacity="0.45"/>
+<path d="M302,916.7 C541.0,916.7 541.0,962.4 780,962.4 L780,971.3 C541.0,971.3 541.0,925.6 302,925.6 Z" fill="#b4b2a9" fill-opacity="0.45"/>
+<path d="M302,1064.0 C541.0,1064.0 541.0,931.2 780,931.2 L780,939.0 C541.0,939.0 541.0,1071.8 302,1071.8 Z" fill="#eda100" fill-opacity="0.45"/>
+<path d="M302,937.6 C541.0,937.6 541.0,893.3 780,893.3 L780,900.4 C541.0,900.4 541.0,944.7 302,944.7 Z" fill="#2a78d6" fill-opacity="0.45"/>
+<path d="M302,876.8 C541.0,876.8 541.0,876.8 780,876.8 L780,880.3 C541.0,880.3 541.0,880.3 302,880.3 Z" fill="#2a78d6" fill-opacity="0.45"/>
+<rect x="290" y="852.0" width="12" height="12.8" fill="#fcfcfb" stroke="#52514e" stroke-width="1"/>
+<text x="280.0" y="861.9" font-size="10" fill="#52514e" text-anchor="end">pre-acquisition 4,873</text>
+<rect x="290" y="876.8" width="12" height="14.8" fill="#008300"/>
+<text x="280.0" y="887.7" font-size="10" fill="#52514e" text-anchor="end">new 5,633</text>
+<rect x="290" y="903.7" width="12" height="22.0" fill="#2a78d6"/>
+<text x="280.0" y="918.1" font-size="10" fill="#52514e" text-anchor="end">retained 8,344</text>
+<rect x="290" y="937.6" width="12" height="24.4" fill="#eda100"/>
+<text x="280.0" y="953.3" font-size="10" fill="#52514e" text-anchor="end">resurrected 9,252</text>
+<rect x="290" y="974.0" width="12" height="78.0" fill="#b4b2a9"/>
+<text x="280.0" y="1016.5" font-size="10" fill="#52514e" text-anchor="end">at-risk 29,646</text>
+<rect x="290" y="1064.0" width="12" height="88.0" fill="#dcdbd3"/>
+<text x="280.0" y="1111.5" font-size="10" fill="#52514e" text-anchor="end">dormant 33,425</text>
+<rect x="792" y="852.0" width="12" height="12.8" fill="#008300"/>
+<text x="812.0" y="861.9" font-size="10" fill="#52514e">new 4,873</text>
+<rect x="792" y="876.8" width="12" height="23.6" fill="#2a78d6"/>
+<text x="812.0" y="892.1" font-size="10" fill="#52514e">retained 8,960</text>
+<rect x="792" y="912.4" width="12" height="26.6" fill="#eda100"/>
+<text x="812.0" y="929.2" font-size="10" fill="#52514e">resurrected 10,105</text>
+<rect x="792" y="951.0" width="12" height="81.8" fill="#b4b2a9"/>
+<text x="812.0" y="995.4" font-size="10" fill="#52514e">at-risk 31,064</text>
+<rect x="792" y="1044.8" width="12" height="95.2" fill="#dcdbd3"/>
+<text x="812.0" y="1095.9" font-size="10" fill="#52514e">dormant 36,171</text>
+<text x="772.0" y="889.8" font-size="9" fill="#52514e" text-anchor="end" paint-order="stroke" stroke="#fcfcfb" stroke-width="3">stays &#183; 4,958</text>
+<text x="772.0" y="982.9" font-size="9" fill="#52514e" text-anchor="end" paint-order="stroke" stroke="#fcfcfb" stroke-width="3">from resurrected &#183; 6,565</text>
+<text x="772.0" y="924.8" font-size="9" fill="#52514e" text-anchor="end" paint-order="stroke" stroke="#fcfcfb" stroke-width="3">from at-risk &#183; 7,139</text>
+<text x="772.0" y="1013.7" font-size="9" fill="#52514e" text-anchor="end" paint-order="stroke" stroke="#fcfcfb" stroke-width="3">stays &#183; 16,795</text>
+<text x="772.0" y="1055.3" font-size="9" fill="#52514e" text-anchor="end" paint-order="stroke" stroke="#fcfcfb" stroke-width="3">from at-risk &#183; 5,712</text>
+<text x="772.0" y="1102.9" font-size="9" fill="#52514e" text-anchor="end" paint-order="stroke" stroke="#fcfcfb" stroke-width="3">stays &#183; 30,459</text>
+<text x="74.0" y="1178.0" font-size="9" fill="#898781">Impossible pairings (e.g. straight from an active month to dormant, or 'retained' after a silent month) are structural zeros of the stage definitions, not observations.</text>
+<text x="42.0" y="1237.0" font-size="9" fill="#898781">Complete months through 2011-11; the final data month is partial and excluded; stage definitions are documented choices (activity = any invoice in the month; dormancy threshold 3 months).</text>
+<text x="42.0" y="1252.0" font-size="9" fill="#898781">'New' is first purchase inside the window - the earliest months conflate truly-new buyers with pre-existing accounts (left-censoring). Identified customers only; measured, not modelled.</text>
+<line x1="42" y1="1264.0" x2="998" y2="1264.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="42.0" y="1282.0" font-size="8.5" fill="#898781" letter-spacing="1.5">PLATE 11 · LIFECYCLE FLOWS</text>
+<text x="998.0" y="1282.0" font-size="8.5" fill="#52514e" text-anchor="end">UCI Online Retail II · CC BY 4.0 · real transactions, Dec 2009 – Dec 2011</text>
 </svg>

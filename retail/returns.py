@@ -368,15 +368,18 @@ def fig_returns(result: ReturnsResult, out_dir: Path = FIGURES) -> Path | None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    from retail.eda import BLUE, GREEN, INK, INK_2, MUTED, _style
+    from retail import plate
+    from retail.plate import GREEN, INK, INK_2
 
-    _style()
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 5.2))
+    plate.style()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 5.6))
 
     lag = result.lag
     labels = lag["lag_bucket"].tolist()
     y = np.arange(len(labels))
-    ax1.barh(y, lag["returned_value"].to_numpy() / 1e3, color=BLUE, height=0.66)
+    # Both panels measure the same quantity (returned value), so both wear the
+    # returns family's green -- color follows the entity across the plate set.
+    ax1.barh(y, lag["returned_value"].to_numpy() / 1e3, color=GREEN, height=0.66)
     ax1.set_yticks(y)
     ax1.set_yticklabels(labels, fontsize=9)
     ax1.invert_yaxis()
@@ -404,21 +407,18 @@ def fig_returns(result: ReturnsResult, out_dir: Path = FIGURES) -> Path | None:
         ax2.text(v, i, tag, va="center", fontsize=7.5, color=INK_2)
 
     o = result.overview
+    rect = plate.chrome(
+        fig, "returns",
+        notes=("Real cancellation invoices; matching is a same-customer/same-SKU heuristic, "
+               "not a linked RMA.",),
+    )
     fig.suptitle(
         f"Returns & cancellations - {100 * o['value_return_rate']:.2f}% of gross value returned "
         f"(net GBP {o['net_value']:,.0f} of {o['gross_value']:,.0f})",
-        fontsize=13, x=0.5, ha="center", color=INK, fontweight="bold",
+        fontsize=13, x=0.045, y=rect[3] - 0.012, ha="left", color=INK, fontweight="bold",
     )
-    fig.text(0.5, 0.005,
-             "Data: UCI Online Retail II (CC BY 4.0) - real cancellation invoices; "
-             "matching is a same-customer/same-SKU heuristic, not a linked RMA.",
-             fontsize=7.5, color=MUTED, ha="center")
-    fig.tight_layout(rect=(0, 0.03, 1, 0.94))
     for spine in ("top", "right"):
         for ax in (ax1, ax2):
             ax.spines[spine].set_visible(False)
-    out = out_dir / "returns_analysis.png"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out, dpi=150, metadata={"Software": "retail-analytics-real"})
-    plt.close(fig)
-    return out
+    return plate.save(fig, out_dir / "returns_analysis.png",
+                      (rect[0], rect[1], rect[2], rect[3] - 0.065))

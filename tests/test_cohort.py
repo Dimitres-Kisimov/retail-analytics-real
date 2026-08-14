@@ -87,6 +87,9 @@ def test_svg_is_wellformed_and_byte_identical(result):
     minidom.parseString(svg)  # raises if not well-formed XML
     assert svg.startswith("<svg")
     assert "Cohort repeat-purchase retention" in svg
+    # the field-notes plate system: numbered plate + designed attribution caption
+    assert "PLATE 10" in svg
+    assert "UCI Online Retail II" in svg and "CC BY 4.0" in svg
     # deterministic: no timestamps / RNG -> byte-identical on re-render
     assert cohort.render_svg(result) == svg
 

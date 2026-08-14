@@ -37,23 +37,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+# Palette + plate chrome shared with every other figure (retail.plate).
+from retail import plate as _plate
 from retail.paths import DELIVERABLES, FIGURES
+from retail.plate import GRID as _GRID
+from retail.plate import INK as _INK
+from retail.plate import INK_2 as _INK_2
+from retail.plate import MUTED as _MUTED
+from retail.plate import SURFACE as _SURFACE
 
-# Palette shared with retail.eda (validated light-mode single-hue blue).
-_BLUE = (42, 120, 214)        # #2a78d6, the sequential end
-_BLUE_HEX = "#2a78d6"
-_TINT = (234, 242, 251)       # pale blue, the low end of the scale
-_INK_2 = "#52514e"
-_MUTED = "#898781"
-_GRID = "#e1e0d9"
-_SURFACE = "#fcfcfb"
-_INK = "#0b0b0b"
+_BLUE_HEX = _plate.BLUE
 
 # How many months-since-acquisition the SVG heatmap and the curve display.
 DISPLAY_OFFSETS = 12
-# Colour shade is proportional to retention**GAMMA for legibility only; the
-# exact percentage is printed inside every cell, so no value is misrepresented.
-_GAMMA = 0.70
 
 
 @dataclass
@@ -173,14 +169,6 @@ def triangle_frame(result: CohortResult, offsets: int | None = None) -> pd.DataF
 # --------------------------------------------------------------------------- #
 # Hand-drawn SVG (no plotting library): deterministic, byte-identical, committed
 # --------------------------------------------------------------------------- #
-def _lerp_color(t: float) -> str:
-    t = 0.0 if t < 0 else (1.0 if t > 1 else t)
-    r = round(_TINT[0] + t * (_BLUE[0] - _TINT[0]))
-    g = round(_TINT[1] + t * (_BLUE[1] - _TINT[1]))
-    b = round(_TINT[2] + t * (_BLUE[2] - _TINT[2]))
-    return f"#{r:02x}{g:02x}{b:02x}"
-
-
 def _esc(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
@@ -188,8 +176,11 @@ def _esc(text: str) -> str:
 def render_svg(result: CohortResult, offsets: int = DISPLAY_OFFSETS) -> str:
     """Build the cohort heatmap triangle + headline retention curve as an SVG string.
 
-    Pure string formatting from the measured triangle -- no timestamps, no RNG,
-    so re-running yields a byte-identical file.
+    Set as a "field notes" plate (retail.plate): numbered plate chrome, hairline
+    rules, the binned single-hue sequential scale with an AA-contrast label in
+    every cell, and the attribution designed into the footer. Pure string
+    formatting from the measured triangle -- no timestamps, no RNG, so
+    re-running yields a byte-identical file.
     """
     tri = result.triangle
     cohorts = list(tri.index)
@@ -198,20 +189,19 @@ def render_svg(result: CohortResult, offsets: int = DISPLAY_OFFSETS) -> str:
 
     # Geometry
     cw, ch = 42, 20
-    left = 118
+    left = 134
     grid_w = cw * ncol
-    width = left + grid_w + 34
-    top = 150                       # first heatmap row baseline (below title block + col header)
+    width = left + grid_w + _plate.SVG_MARGIN
+    top = 236                       # first heatmap row (below header + title + scale legend)
     heat_bottom = top + ch * len(cohorts)
     curve_top = heat_bottom + 78
     curve_h = 150
     curve_bottom = curve_top + curve_h
-    height = curve_bottom + 74
+    content_bottom = curve_bottom + 34
+    footer_notes = 2
+    height = content_bottom + _plate.svg_footer_height(footer_notes)
 
-    def txt(x, y, s, size, fill, *, anchor="start", weight="400"):
-        a = f' text-anchor="{anchor}"' if anchor != "start" else ""
-        w = f' font-weight="{weight}"' if weight != "400" else ""
-        return f'<text x="{x:.1f}" y="{y:.1f}" font-size="{size}" fill="{fill}"{a}{w}>{s}</text>'
+    txt = _plate.svg_text
 
     p: list[str] = []
     p.append(
@@ -220,15 +210,27 @@ def render_svg(result: CohortResult, offsets: int = DISPLAY_OFFSETS) -> str:
         f'style="background:{_SURFACE}">'
     )
     p.append(f'<rect x="0" y="0" width="{width}" height="{height}" fill="{_SURFACE}"/>')
+    p.extend(_plate.svg_header(width, "cohort"))
 
     # Title block (short lines so nothing overflows the canvas width)
-    p.append(txt(left, 34, "Cohort repeat-purchase retention", 18, _INK, weight="700"))
-    p.append(txt(left, 55, "% of each first-purchase cohort that buys again m months later "
+    p.append(txt(_plate.SVG_MARGIN, 94, "Cohort repeat-purchase retention", 19, _INK, weight="700"))
+    p.append(txt(_plate.SVG_MARGIN, 116, "% of each first-purchase cohort that buys again m months later "
                  f"(identified customers, n={result.n_customers:,}).", 11, _INK_2))
-    p.append(txt(left, 72, "Blank cells are not yet observable (right-censored); "
+    p.append(txt(_plate.SVG_MARGIN, 133, "Blank cells are not yet observable (right-censored); "
                  "offset 0 is the acquisition month (100%).", 11, _MUTED))
-    p.append(txt(left, 89, f"Cell shade increases with retention^{_GAMMA:g} for legibility; "
-                 "the exact % is printed in each cell.", 11, _MUTED))
+
+    # Designed scale legend: the binned single-hue ramp, dark-anchored. Shade is
+    # legibility only -- the exact % is printed inside every populated cell.
+    leg_x, leg_y, leg_w, leg_h = _plate.SVG_MARGIN, 156, 30, 13
+    for i, (_hi, fill, _ink) in enumerate(_plate.SEQ_BINS):
+        p.append(f'<rect x="{leg_x + i * leg_w}" y="{leg_y}" width="{leg_w - 1}" '
+                 f'height="{leg_h}" fill="{fill}"/>')
+    for i, edge in enumerate(_plate.SEQ_BIN_EDGES):
+        p.append(txt(leg_x + i * leg_w, leg_y + leg_h + 13, f"{edge:g}", 8.5, _MUTED,
+                     anchor="middle" if i else "start"))
+    p.append(txt(leg_x + len(_plate.SEQ_BINS) * leg_w + 14, leg_y + leg_h - 2,
+                 "% buying again -- shade is binned for legibility; "
+                 "the exact % is printed in each cell.", 10, _MUTED))
 
     # Column headers (months since first purchase)
     p.append(txt(left, top - 30, "months since first purchase &#8594;", 10.5, _INK_2, weight="600"))
@@ -237,7 +239,7 @@ def render_svg(result: CohortResult, offsets: int = DISPLAY_OFFSETS) -> str:
     p.append(txt(left - 10, top - 9, "cohort", 10.5, _INK_2, anchor="end", weight="600"))
     p.append(txt(left - 64, top - 9, "size", 9, _MUTED, anchor="end", weight="600"))
 
-    # Heatmap cells
+    # Heatmap cells (1px surface stroke = the surface gap between touching fills)
     for ri, cohort in enumerate(cohorts):
         cy = top + ri * ch
         size = int(result.sizes.iloc[ri])
@@ -251,14 +253,12 @@ def render_svg(result: CohortResult, offsets: int = DISPLAY_OFFSETS) -> str:
                 p.append(f'<rect x="{x}" y="{cy}" width="{cw}" height="{ch}" '
                          f'fill="{_SURFACE}" stroke="{_GRID}" stroke-width="1"/>')
                 continue
-            t = float(val) ** _GAMMA
-            fill = _lerp_color(t)
-            label_fill = "#ffffff" if t > 0.55 else _INK_2
+            fill, label_fill = _plate.seq_bin(100 * float(val))
             p.append(f'<rect x="{x}" y="{cy}" width="{cw}" height="{ch}" '
                      f'fill="{fill}" stroke="{_SURFACE}" stroke-width="1"/>')
             p.append(txt(x + cw / 2, mid, str(round(100 * val)), 9.5, label_fill, anchor="middle"))
 
-    # ---- Headline curve panel ----
+    # ---- Headline curve panel (measured, so it is drawn in solid ink) ----
     curve = result.curve[result.curve["offset"] <= (ncol - 1)]
     p.append(txt(left, curve_top - 20, "Headline retention curve "
                  "(size-weighted across observable cohorts)", 13, _INK, weight="700"))
@@ -282,7 +282,9 @@ def render_svg(result: CohortResult, offsets: int = DISPLAY_OFFSETS) -> str:
     poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
     p.append(f'<polyline points="{poly}" fill="none" stroke="{_BLUE_HEX}" stroke-width="2.2"/>')
     for (x, y), r in zip(pts, curve.itertuples(index=False), strict=True):
-        p.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="{_BLUE_HEX}"/>')
+        # 2px surface ring keeps the markers legible where they cross the line
+        p.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{_BLUE_HEX}" '
+                 f'stroke="{_SURFACE}" stroke-width="2"/>')
         p.append(txt(x, curve_bottom + 14, str(int(r.offset)), 9, _MUTED, anchor="middle"))
 
     # annotate month-1 and month-6
@@ -291,17 +293,18 @@ def render_svg(result: CohortResult, offsets: int = DISPLAY_OFFSETS) -> str:
         key = f"month_{k}_rate"
         if key in hl:
             x, y = _pt(k, 100 * hl[key])
-            p.append(txt(x, y - 9, f"{100 * hl[key]:.1f}%", 10, _INK, anchor="middle", weight="700"))
+            p.append(txt(x, y - 11, f"{100 * hl[key]:.1f}%", 10, _INK, anchor="middle", weight="700"))
     p.append(txt(left + plot_w / 2, curve_bottom + 30, "months since first purchase", 10, _INK_2,
                  anchor="middle"))
 
-    # Footnotes (two fitted lines so nothing overflows the canvas width)
+    # Plate footer: honesty notes above the rule, identity + attribution below it
     lc = result.last_complete_month
     partial = "; final month partial, excluded as a target" if result.final_month_partial else ""
-    p.append(txt(left, curve_bottom + 48, f"Last complete month {lc}{partial}.", 9, _MUTED))
-    p.append(txt(left, curve_bottom + 62,
-                 "Data: UCI Online Retail II (CC BY 4.0) - real transactions; retention is measured, not modelled.",
-                 9, _MUTED))
+    p.extend(_plate.svg_footer(
+        width, height, "cohort",
+        notes=(f"Last complete month {lc}{partial}.",
+               "Retention is measured from the real transactions, not modelled."),
+    ))
 
     p.append("</svg>")
     return "\n".join(p) + "\n"
