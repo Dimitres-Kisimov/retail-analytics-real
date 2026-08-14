@@ -1,7 +1,8 @@
 """End-to-end pipeline entry point.
 
-    python -m retail --deliverables     # ingest -> clean -> EDA -> returns -> RFM -> cohort -> lifecycle -> CLV -> forecast -> basket -> PDF/Excel
+    python -m retail --deliverables     # ingest -> clean -> EDA -> returns -> RFM -> cohort -> lifecycle -> CLV -> forecast -> basket -> pricing -> PDF/Excel
     python -m retail --basket           # market-basket analysis only (top rules + figure)
+    python -m retail --pricing          # price ladders + observational price/quantity slopes (figure + CSV)
     python -m retail --cohort           # cohort repeat-purchase retention only (triangle + SVG + CSV)
     python -m retail --lifecycle        # lifecycle stages & growth accounting (monthly flows + SVG + CSVs)
     python -m retail --clv              # customer lifetime value only (BG/NBD + Gamma-Gamma + holdout check)
@@ -32,6 +33,7 @@ from retail import (
     ingest,
     lifecycle,
     paths,
+    pricing,
     quality,
     rfm,
 )
@@ -47,12 +49,12 @@ FIXTURE_SAMPLE = paths.ROOT / "tests" / "fixtures" / "sample.csv"
 def run_pipeline(force_reingest: bool = False) -> int:
     t0 = time.time()
 
-    print("[1/11] ingest: loading raw workbook (cached to data/interim/ after first run)")
+    print("[1/12] ingest: loading raw workbook (cached to data/interim/ after first run)")
     df = ingest.load_raw(force=force_reingest)
     raw_report = ingest.raw_quality_report(df)
     ingest.print_quality_report(raw_report)
 
-    print("[2/11] clean: documented pipeline")
+    print("[2/12] clean: documented pipeline")
     result = clean.clean(df)
     clean_table = result.report()
     print(clean_table.to_string(index=False))
@@ -66,11 +68,11 @@ def run_pipeline(force_reingest: bool = False) -> int:
     quality_after = quality.assess(sales, q_cfg, label="CLEANED sales")
     print(f"      quality {quality.compare(quality_before, quality_after)}")
 
-    print("[3/11] eda: writing figures/")
+    print("[3/12] eda: writing figures/")
     for fig_path in eda.make_all_figures(sales, returns_frame):
         print(f"      [OK] {fig_path.name}")
 
-    print("[4/11] returns: cancellations analysis (return rates, reverse-logistics lag, per-SKU)")
+    print("[4/12] returns: cancellations analysis (return rates, reverse-logistics lag, per-SKU)")
     returns_result = returns_mod.run_returns_analysis(sales, returns_frame)
     _print_returns_summary(returns_result)
     returns_fig = returns_mod.fig_returns(returns_result, out_dir=paths.FIGURES)
@@ -78,12 +80,12 @@ def run_pipeline(force_reingest: bool = False) -> int:
     if returns_fig is not None:
         print(f"      [OK] {returns_fig.name} (committed figure) | {returns_csv.name} (deliverable)")
 
-    print("[5/11] rfm: segmentation on identified customers")
+    print("[5/12] rfm: segmentation on identified customers")
     rfm_customers, rfm_summary = rfm.run_rfm(sales)
     print(f"      customers scored: {fmt_int(len(rfm_customers))}")
     print(rfm_summary.to_string(index=False))
 
-    print("[6/11] cohort: repeat-purchase retention by acquisition month")
+    print("[6/12] cohort: repeat-purchase retention by acquisition month")
     cohort_result = cohort.cohort_retention(sales)
     print(f"      identified customers in cohorts: {fmt_int(cohort_result.n_customers)} | "
           f"cohorts: {len(cohort_result.triangle)} | last complete month {cohort_result.last_complete_month}")
@@ -92,7 +94,7 @@ def run_pipeline(force_reingest: bool = False) -> int:
     csv_path = cohort.write_csv(cohort_result)
     print(f"      [OK] {svg_path.name} (committed figure) | {csv_path.name} (deliverable)")
 
-    print("[7/11] lifecycle: stages & growth accounting (monthly flows, quick ratio)")
+    print("[7/12] lifecycle: stages & growth accounting (monthly flows, quick ratio)")
     lifecycle_result = lifecycle.lifecycle_states(sales)
     _print_lifecycle_summary(lifecycle_result)
     lc_svg = lifecycle.write_svg(lifecycle_result)
@@ -100,7 +102,7 @@ def run_pipeline(force_reingest: bool = False) -> int:
     print(f"      [OK] {lc_svg.name} (committed figure) | {lc_monthly_csv.name} + "
           f"{lc_flows_csv.name} (deliverables)")
 
-    print("[8/11] clv: predictive lifetime value (BG/NBD + Gamma-Gamma, out-of-sample check)")
+    print("[8/12] clv: predictive lifetime value (BG/NBD + Gamma-Gamma, out-of-sample check)")
     clv_result = clv.run_clv(sales)
     _print_clv_summary(clv_result)
     clv_fig = clv.fig_clv(clv_result, out_dir=paths.FIGURES)
@@ -108,7 +110,7 @@ def run_pipeline(force_reingest: bool = False) -> int:
     if clv_fig is not None:
         print(f"      [OK] {clv_fig.name} (committed figure) | {clv_csv.name} (deliverable)")
 
-    print("[9/11] forecast: rolling-origin CV on weekly revenue")
+    print("[9/12] forecast: rolling-origin CV on weekly revenue")
     weekly = forecast.weekly_revenue(sales)
     cv = forecast.cross_validate(weekly)
     cv_summary = forecast.cv_summary(cv)
@@ -117,14 +119,22 @@ def run_pipeline(force_reingest: bool = False) -> int:
     final_fold = forecast.final_fold_forecast(weekly)
     sku_table = forecast.top_sku_forecasts(sales)
 
-    print("[10/11] basket: market-basket mining (Apriori + FP-growth cross-check)")
+    print("[10/12] basket: market-basket mining (Apriori + FP-growth cross-check)")
     basket_result = basket.run_basket_analysis(sales)
     _print_basket_summary(basket_result)
     fig_path = basket.fig_top_rules(basket_result.rules, out_dir=paths.FIGURES)
     if fig_path is not None:
         print(f"      [OK] {fig_path.name}")
 
-    print("[11/11] exports: PDF + Excel deliverables")
+    print("[11/12] pricing: price ladders + observational price/quantity slopes")
+    pricing_result = pricing.run_pricing_analysis(sales)
+    _print_pricing_summary(pricing_result)
+    pricing_fig = pricing.fig_price_ladder(pricing_result, out_dir=paths.FIGURES)
+    pricing_csv = pricing.write_csv(pricing_result)
+    if pricing_fig is not None:
+        print(f"      [OK] {pricing_fig.name} (committed figure) | {pricing_csv.name} (deliverable)")
+
+    print("[12/12] exports: PDF + Excel deliverables")
     ctx = {
         "raw_report": raw_report,
         "clean_table": clean_table,
@@ -141,6 +151,7 @@ def run_pipeline(force_reingest: bool = False) -> int:
         "clv_result": clv_result,
         "sku_table": sku_table,
         "rules_table": basket.rules_table(basket_result.rules),
+        "pricing_result": pricing_result,
         "quality_before": quality_before,
         "quality_after": quality_after,
     }
@@ -286,6 +297,49 @@ def _print_lifecycle_summary(result) -> None:
     print(f"      [HEADLINE] {lifecycle.headline_text(result)}")
 
 
+def _print_pricing_summary(result) -> None:
+    """ASCII summary of the pricing run: ladder shape, realization, both slopes, null."""
+    o, cfg = result.overview, result.config
+    print(
+        f"      SKUs {fmt_int(o['n_skus'])} | sold at more than one price "
+        f"{fmt_int(o['n_multi_price_skus'])} ({fmt_pct(o['multi_price_share'], 1)})"
+    )
+    print(
+        f"      qualifying ladders (>= {cfg.min_distinct_prices} prices, >= {cfg.min_lines} lines): "
+        f"{fmt_int(o['n_qualifying'])} SKUs = {fmt_pct(o['qualifying_revenue_share'], 1)} of revenue | "
+        f"median {o['median_rungs']:.0f} rungs, p90/p10 spread {o['median_spread']:.2f}x"
+    )
+    print(
+        f"      units sold below / at / above the posted price: "
+        f"{fmt_pct(o['unit_share_below'], 1)} / {fmt_pct(o['unit_share_at'], 1)} / "
+        f"{fmt_pct(o['unit_share_above'], 1)} | price realization {fmt_pct(o['realization'], 1)} "
+        f"(arithmetic on the units that actually sold, not an opportunity)"
+    )
+    if o["n_fitted"]:
+        print(
+            f"      price/quantity slopes on {fmt_int(o['n_fitted'])} SKUs -- "
+            f"volume-discount schedule (within week) {o['median_slope_within_week']:.2f} | "
+            f"posted price week to week {o['median_slope_between_week']:.2f} | "
+            f"market-adjusted {o['median_slope_market_adj']:.2f} "
+            f"({fmt_pct(o['share_slope_negative'], 1)} negative; "
+            f"{o['constant_spend_slope']:.0f} = same spend per line, no demand response)"
+        )
+        print(
+            f"      permutation null ({cfg.n_permutations} draws/SKU, seed {cfg.seed}): "
+            f"{fmt_int(o['n_perm_significant'])}/{fmt_int(o['n_perm_tested'])} SKUs "
+            f"({fmt_pct(o['perm_significant_share'], 1)}) beat their own reshuffled weeks at p<=0.05"
+        )
+        print(
+            f"      [HONEST] the two slopes agree on the median but correlate only "
+            f"r={o['slope_agreement_corr']:.2f} per SKU -- an assortment-level reading, NOT a "
+            f"per-SKU price recommendation, and neither slope is causal."
+        )
+    if not result.profile.empty:
+        print("      top 10 ladders by revenue ('-' = posted price barely moved week to week, no slope fitted):")
+        print(pricing.ladder_table(result).to_string(index=False))
+    print(f"      [HEADLINE] {pricing.headline_text(result)}")
+
+
 def _print_returns_summary(result) -> None:
     """ASCII summary of the returns run: rates, matching, lag, top returned SKUs."""
     o = result.overview
@@ -344,6 +398,33 @@ def run_returns(force_reingest: bool = False) -> int:
     fig_path = returns_mod.fig_returns(result, out_dir=paths.FIGURES)
     csv_path = returns_mod.write_csv(result, out_dir=paths.DELIVERABLES)
     if fig_path is not None:
+        print(f"      [OK] {fig_path.name} ({fig_path.stat().st_size / 1024:.1f} KB, committed)")
+    print(f"      [OK] {csv_path.name} ({csv_path.stat().st_size / 1024:.1f} KB, deliverable)")
+    return 0
+
+
+def run_pricing(force_reingest: bool = False) -> int:
+    """Standalone pricing run: price ladders, realization, both slopes, figure + CSV."""
+    try:
+        df = ingest.load_raw(force=force_reingest)
+    except FileNotFoundError:
+        print(
+            "[SKIP] raw data not found - run `python scripts/download_data.py` first "
+            "(the dataset is deliberately not committed)."
+        )
+        return 0
+    print("[1/3] clean: documented pipeline")
+    sales = clean.clean(df).sales
+    print(f"      sales rows {fmt_int(len(sales))}")
+    print("[2/3] pricing: price ladders + observational price/quantity slopes")
+    result = pricing.run_pricing_analysis(sales)
+    _print_pricing_summary(result)
+    print("[3/3] outputs: figures/price_ladder.png + deliverables/price_ladder.csv")
+    fig_path = pricing.fig_price_ladder(result, out_dir=paths.FIGURES)
+    csv_path = pricing.write_csv(result, out_dir=paths.DELIVERABLES)
+    if fig_path is None:
+        print("      [WARN] no SKU carried enough price variation to draw a ladder")
+    else:
         print(f"      [OK] {fig_path.name} ({fig_path.stat().st_size / 1024:.1f} KB, committed)")
     print(f"      [OK] {csv_path.name} ({csv_path.stat().st_size / 1024:.1f} KB, deliverable)")
     return 0
@@ -577,6 +658,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="customer lifetime value: BG/NBD + Gamma-Gamma, out-of-sample holdout check, figure + CSV")
     parser.add_argument("--returns", action="store_true",
                         help="returns & cancellations analysis: return rates, reverse-logistics lag, per-SKU CSV")
+    parser.add_argument("--pricing", action="store_true",
+                        help="price ladders: prices actually charged per SKU, price realization, "
+                             "and two observational price/quantity slopes with a permutation null")
     parser.add_argument("--quality", action="store_true", help="print the raw-quality report only")
     parser.add_argument("--report-card", action="store_true",
                         help="data-quality report card: score raw vs cleaned and report the lift")
@@ -595,6 +679,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_clv(force_reingest=args.force_reingest)
     if args.returns:
         return run_returns(force_reingest=args.force_reingest)
+    if args.pricing:
+        return run_pricing(force_reingest=args.force_reingest)
     if args.quality:
         report = ingest.raw_quality_report(ingest.load_raw(force=args.force_reingest))
         ingest.print_quality_report(report)

@@ -488,6 +488,66 @@ gift/wholesale retailer — **correlation, not causation**. The full per-SKU tab
 returned units and value, with both return rates) is written to
 `deliverables/returns_analysis.csv` and the **Returns** sheet of the Excel workbook.
 
+## Price ladders — the same SKU at many prices
+
+```bash
+python -m retail --pricing     # ladders + price realization + two price/quantity slopes
+```
+
+`Price` in this dataset is not a property of a product — it is a property of a *line*.
+**4,342 of 4,895 SKUs (88.7%) sold at more than one price**, so before anything can be
+said about pricing, the ladder has to be measured: every rung a SKU was actually charged
+at, with the units and revenue that sat on it.
+
+![Price ladders](figures/price_ladder.png)
+
+**The ladder (measured).** Restricting to SKUs with a real ladder — **≥ 4 distinct prices
+and ≥ 200 invoice lines**, which is **1,342 SKUs carrying 79.7% of revenue (GBP
+15,653,663)** — the median SKU has **6 rungs** and a **p90/p10 price spread of 2.00×**: the
+high price a SKU sells at is typically double its low one. Against each SKU's **posted
+price** (the modal rung by lines — the price most invoice lines were written at),
+**39.5% of units sold below it, 51.5% at it, 9.0% above it**.
+
+**Price realization is 98.6% — and that is not an opportunity.** The same units repriced at
+their SKU's posted price would total GBP 15,870,272 against the GBP 15,653,663 actually
+booked: a gap of **GBP 216,608, or 1.4%**. That is *arithmetic on the units that did sell*,
+not a forecast about units that did not — and the slopes below are the reason the arithmetic
+must not be read as money left on the table.
+
+**Two price/quantity slopes, kept apart on purpose.** Both are log-log OLS per SKU, on the
+1,113 SKUs with enough weekly variation to fit:
+
+| slope | what varies | median | reading |
+|---|---|---:|---|
+| within week | one buyer vs another, same week | **-1.71** | the seller's own volume-discount schedule |
+| posted price, week to week | the posted price moved | **-1.78** | co-movement, confounded with season |
+| market-adjusted | as above, minus the assortment's weekly unit index | **-1.67** | the closest thing here to a demand answer |
+
+**96.0%** of market-adjusted slopes are negative, and **825 of 1,113 SKUs (74.1%)** beat
+their own permutation null — units reshuffled across that SKU's own weeks, 199 seeded draws
+each — at p ≤ 0.05. So there *is* signal beyond noise.
+
+**The honest part is what the slopes do not license.** Read **-1.0 as the benchmark, not
+zero**: a buyer who spends the same amount per line whatever the price produces a slope of
+exactly -1 with no demand response at all. The within-week number (-1.71) is measured on
+variation that contains **no price change** — it is the discount schedule alone — and it
+lands within 0.04 of the market-adjusted number. And per SKU the two measurements correlate
+at only **r = 0.20**: they agree about the assortment and disagree about almost every
+individual product. That is why plate 17 draws them against each other rather than reporting
+one of them: this data supports an **assortment-level statement, not a per-SKU price
+recommendation**.
+
+**Caveats.** Prices here were never randomised — there is no experiment, no cost data, no
+competitor prices, no stock levels, so **nothing here is an elasticity and nothing here is
+causal**. Wholesale and retail orders are mixed, so one SKU's ladder spans two different
+kinds of buyer. "Posted price" is a documented choice (modal by lines, ties to the lower
+rung), not a price list the retailer published. 553 SKUs sold at exactly one price and are
+outside this view entirely, and blank slopes in the table are SKUs whose posted price barely
+moved week to week — no slope was fitted rather than a fragile one reported. The full
+per-SKU table (rungs, posted vs realized price, spread, unit split, all three slopes and the
+permutation p-value) is written to `deliverables/price_ladder.csv` and the **PriceLadder**
+sheet of the Excel workbook.
+
 ## Data-quality report card
 
 ```bash
@@ -562,9 +622,11 @@ per-dimension lift and the flat findings list — and WeeklyRevenue),
 `deliverables/cohort_retention.csv` (the same triangle as a flat CSV),
 `deliverables/lifecycle_stages.csv` + `deliverables/lifecycle_flows.csv` (the monthly
 lifecycle table and stage-flow matrix),
-`deliverables/customer_lifetime_value.csv` (the full per-customer CLV table) and
-`deliverables/returns_analysis.csv` (the full per-SKU returns table). The basket, cohort,
-lifecycle, CLV, returns and report-card steps run inside the pipeline, so every sheet is
+`deliverables/customer_lifetime_value.csv` (the full per-customer CLV table),
+`deliverables/returns_analysis.csv` (the full per-SKU returns table) and
+`deliverables/price_ladder.csv` (the full per-SKU price ladder with both slopes and the
+permutation p-value; the same numbers land in the **PriceLadder** sheet). The basket, cohort,
+lifecycle, CLV, returns, pricing and report-card steps run inside the pipeline, so every sheet is
 always current.
 
 ## Reproduce
@@ -578,7 +640,8 @@ python -m retail --cohort          # cohort repeat-purchase retention only (skip
 python -m retail --lifecycle       # lifecycle stages & growth accounting only (skips politely if absent)
 python -m retail --clv             # customer lifetime value only (skips politely if absent)
 python -m retail --returns         # returns & cancellations analysis only (skips politely if absent)
-pytest -q                          # 113 tests, fixture-based, no download needed
+python -m retail --pricing         # price ladders + price/quantity slopes (skips politely if absent)
+pytest -q                          # 143 tests, fixture-based, no download needed
 ruff check .
 ```
 
@@ -607,6 +670,10 @@ dataset; the one full-data test skips itself cleanly when `data/raw/` is absent.
 - **Wholesale and retail orders are mixed** and not separable with certainty (many
   customers are wholesalers, hence 80k-unit orders).
 - Prices are nominal GBP; no inflation or FX adjustment.
+- **The price/quantity slopes are observational, not elasticities** — prices were never
+  randomised, wholesale and retail buyers are mixed in the same ladder, and the two
+  independent measurements correlate at only r = 0.20 per SKU. They support an
+  assortment-level reading; they do not price an individual SKU.
 
 ## License
 

@@ -28,14 +28,14 @@ from matplotlib.colors import BoundaryNorm, ListedColormap
 from retail import plate
 from retail.paths import DELIVERABLES
 from retail.plate import (
-    BLUE,
-    GREEN,
+    BERRY,
     GRID,
+    INDIGO,
     INK,
     INK_2,
-    MAGENTA,
     MODEL_DASH,
     MUTED,
+    RUST,
     SURFACE,
 )
 
@@ -116,7 +116,7 @@ def _forecast_page(pp: PdfPages, ctx: dict) -> None:
 
     monthly = ctx["monthly"]
     x = np.arange(len(monthly))
-    ax1.plot(x, monthly["Revenue"].to_numpy() / 1e6, color=BLUE, linewidth=2, marker="o", markersize=3)
+    ax1.plot(x, monthly["Revenue"].to_numpy() / 1e6, color=RUST, linewidth=2, marker="o", markersize=3)
     ax1.set_xticks(x)
     ax1.set_xticklabels(monthly["YearMonth"], rotation=45, ha="right", fontsize=7)
     ax1.set_ylabel("revenue (GBP, m)")
@@ -129,7 +129,7 @@ def _forecast_page(pp: PdfPages, ctx: dict) -> None:
     # Real weekly revenue in solid ink; every model overlay dashed, per the
     # plate system's measured-vs-modelled convention.
     ax2.plot(idx, final["actual"], color=INK, linewidth=2.2, label="actual", marker="o", markersize=4)
-    model_colors = [MUTED, GREEN, MAGENTA, BLUE]
+    model_colors = [MUTED, INDIGO, BERRY, RUST]
     for color, model in zip(model_colors, [c for c in final.columns if c != "actual"], strict=False):
         ax2.plot(idx, final[model], color=color, linewidth=1.6, linestyle=MODEL_DASH, label=model)
     ax2.set_xticks(idx)
@@ -164,7 +164,7 @@ def _rfm_page(pp: PdfPages, ctx: dict) -> None:
     fig, ax = plt.subplots(figsize=(11, 8.5))
     rect = plate.chrome(fig, "rfm")
     ax.grid(axis="y", visible=False)
-    ax.barh(seg["Segment"], 100 * seg["RevenueShare"], color=BLUE, height=0.62)
+    ax.barh(seg["Segment"], 100 * seg["RevenueShare"], color=RUST, height=0.62)
     for i, (share, customers) in enumerate(zip(seg["RevenueShare"], seg["Customers"], strict=True)):
         ax.text(100 * share + 0.4, i, f"{100 * share:.1f}%  ({customers:,} customers)",
                 va="center", fontsize=9, color=INK_2)
@@ -225,7 +225,7 @@ def _cohort_page(pp: PdfPages, ctx: dict) -> None:
 
     curve = result.curve
     curve = curve[curve["offset"] < ncol]
-    ax2.plot(curve["offset"], 100 * curve["avg_retention"], color=BLUE, linewidth=2, marker="o", markersize=4)
+    ax2.plot(curve["offset"], 100 * curve["avg_retention"], color=RUST, linewidth=2, marker="o", markersize=4)
     ax2.set_xticks(range(ncol))
     ax2.set_ylim(0, 100)
     ax2.set_xlabel("months since first purchase")
@@ -258,7 +258,7 @@ def _lifecycle_page(pp: PdfPages, ctx: dict) -> None:
                 edgecolor=SURFACE, linewidth=0.8, label=name)
         bottom += vals
     churn = np.nan_to_num(m["churned"].to_numpy(dtype=float), nan=0.0)
-    ax1.bar(x, -churn, color=MAGENTA, width=0.72, edgecolor=SURFACE, linewidth=0.8,
+    ax1.bar(x, -churn, color=BERRY, width=0.72, edgecolor=SURFACE, linewidth=0.8,
             label="churned")
     ax1.axhline(0, color=INK_2, linewidth=1)
     ax1.set_xticks(x)
@@ -321,7 +321,7 @@ def _clv_page(pp: PdfPages, ctx: dict) -> None:
         bf = v.by_frequency
         idx = np.arange(len(bf))
         w = 0.4
-        ax1.bar(idx - w / 2, bf["actual_mean"], width=w, color=BLUE, label="actual")
+        ax1.bar(idx - w / 2, bf["actual_mean"], width=w, color=RUST, label="actual")
         ax1.bar(idx + w / 2, bf["predicted_mean"], width=w, facecolor=SURFACE,
                 edgecolor=INK_2, linewidth=1.1, linestyle=MODEL_DASH, label="predicted")
         ax1.set_xticks(idx)
@@ -333,7 +333,7 @@ def _clv_page(pp: PdfPages, ctx: dict) -> None:
         ax1.set_title("Out-of-sample check (predicted vs actual)", fontsize=11)
 
     cum_x, cum_y = clv.lorenz_points(result.clv_table["clv"].to_numpy())
-    ax2.plot(100 * cum_x, 100 * cum_y, color=BLUE, linewidth=2, linestyle=MODEL_DASH)
+    ax2.plot(100 * cum_x, 100 * cum_y, color=RUST, linewidth=2, linestyle=MODEL_DASH)
     ax2.plot([0, 100], [0, 100], color=MUTED, linewidth=1, linestyle=":")
     ax2.set_xlabel("share of customers (%, lowest CLV first)")
     ax2.set_ylabel("share of predicted CLV (%)")
@@ -416,6 +416,48 @@ def _returns_page(pp: PdfPages, ctx: dict) -> None:
     )
 
 
+def _pricing_page(pp: PdfPages, ctx: dict) -> None:
+    """Price ladders: what each SKU actually sold at, and what the slopes do (not) say."""
+    result = ctx.get("pricing_result")
+    if result is None or result.profile.empty:
+        return
+    from retail import pricing
+
+    o = result.overview
+    top = pricing.ladder_table(result, top=14).copy()
+    top.columns = ["SKU", "Description", "Rungs", "Posted (GBP)", "Realized (GBP)",
+                   "p90/p10", "Units below posted %", "Market-adj. slope"]
+    lines = [
+        f"{o['n_multi_price_skus']:,} of {o['n_skus']:,} SKUs ({100 * o['multi_price_share']:.1f}%) sold at "
+        f"more than one price. Qualifying ladders: {o['n_qualifying']:,} SKUs "
+        f"({100 * o['qualifying_revenue_share']:.1f}% of revenue),",
+        f"median {o['median_rungs']:.0f} rungs, p90/p10 spread {o['median_spread']:.2f}x. Units sold below / "
+        f"at / above the posted (modal) price: {100 * o['unit_share_below']:.1f}% / "
+        f"{100 * o['unit_share_at']:.1f}% / {100 * o['unit_share_above']:.1f}%.",
+        f"Price realization {100 * o['realization']:.1f}% - arithmetic on the units that actually sold, "
+        f"never a claim about units that did not.",
+    ]
+    if o["n_fitted"]:
+        lines += [
+            f"Price/quantity slopes ({o['n_fitted']:,} SKUs, log-log OLS): "
+            f"{o['median_slope_within_week']:.2f} from the volume-discount schedule alone (within week), "
+            f"{o['median_slope_market_adj']:.2f} market-adjusted",
+            f"week to week; {o['n_perm_significant']:,} of {o['n_perm_tested']:,} beat a seeded permutation "
+            f"null. The two agree on the median and correlate only r={o['slope_agreement_corr']:.2f} per SKU.",
+            f"NOT an elasticity - prices here were never randomised. A slope of "
+            f"{o['constant_spend_slope']:.0f} is what a buyer spending the same amount per line produces "
+            f"with no demand response at all;",
+            "read the numbers against that, not against zero.",
+        ]
+    lines.append('"-" = the SKU\'s posted price barely moved week to week, so no slope was fitted.')
+    _table_page(
+        pp, top, "pricing",
+        "Price ladders - the same SKU at many prices",
+        note="\n".join(lines),
+        col_widths=[0.08, 0.28, 0.07, 0.11, 0.12, 0.09, 0.15, 0.13],
+    )
+
+
 def export_pdf(ctx: dict, path: Path | None = None) -> Path:
     path = path or DELIVERABLES / PDF_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -487,6 +529,7 @@ def export_pdf(ctx: dict, path: Path | None = None) -> Path:
             "Zero-wk share = share of zero-demand weeks since first sale (intermittency).",
             col_widths=[0.07, 0.25, 0.08, 0.07, 0.11, 0.09, 0.10, 0.08, 0.15],
         )
+        _pricing_page(pp, ctx)
     return path
 
 
@@ -689,6 +732,60 @@ def _write_returns_sheet(writer, ctx: dict) -> None:
     returns_mod.sku_export_frame(result).to_excel(writer, sheet_name=sheet, index=False, startrow=row)
 
 
+def _write_pricing_sheet(writer, ctx: dict) -> None:
+    """Price ladders: headline metrics, then the full per-SKU table (screen == export)."""
+    result = ctx.get("pricing_result")
+    if result is None or result.profile.empty:
+        return
+    from retail import pricing
+
+    sheet = "PriceLadder"
+    o = result.overview
+    header = pd.DataFrame(
+        {"Price ladders - every price each SKU was actually charged at, measured on the real invoices": [
+            f"{100 * o['multi_price_share']:.1f}% of SKUs sold at more than one price | qualifying "
+            f"ladders {o['n_qualifying']:,} ({100 * o['qualifying_revenue_share']:.1f}% of revenue) | "
+            f"slopes are observational co-movement, NOT causal elasticity (no experiment, no cost data)"
+        ]}
+    )
+    header.to_excel(writer, sheet_name=sheet, index=False, startrow=0)
+
+    metrics = pd.DataFrame(
+        {
+            "metric": [
+                "SKUs in cleaned sales", "SKUs sold at more than one price", "multi-price share %",
+                "qualifying SKUs", "qualifying revenue (GBP)", "qualifying revenue share %",
+                "median rungs per ladder", "median p90/p10 price spread",
+                "units below posted price %", "units at posted price %", "units above posted price %",
+                "revenue at posted price (GBP)", "price realization %",
+                "SKUs with fitted slopes", "median slope: volume-discount schedule (within week)",
+                "median slope: posted price week to week", "median slope: market-adjusted",
+                "negative market-adjusted slopes %", "per-SKU agreement between the two slopes (r)",
+                "constant-spend benchmark slope", "permutation draws per SKU", "permutation seed",
+                "SKUs beating their own permutation null at p<=0.05",
+            ],
+            "value": [
+                o["n_skus"], o["n_multi_price_skus"], round(100 * o["multi_price_share"], 2),
+                o["n_qualifying"], round(o["qualifying_revenue"], 2),
+                round(100 * o["qualifying_revenue_share"], 2),
+                o["median_rungs"], round(o["median_spread"], 3),
+                round(100 * o["unit_share_below"], 2), round(100 * o["unit_share_at"], 2),
+                round(100 * o["unit_share_above"], 2), round(o["revenue_at_posted"], 2),
+                round(100 * o["realization"], 2),
+                o["n_fitted"], round(o["median_slope_within_week"], 4),
+                round(o["median_slope_between_week"], 4), round(o["median_slope_market_adj"], 4),
+                round(100 * o["share_slope_negative"], 2), round(o["slope_agreement_corr"], 4),
+                o["constant_spend_slope"], result.config.n_permutations, result.config.seed,
+                o["n_perm_significant"],
+            ],
+        }
+    )
+    metrics.to_excel(writer, sheet_name=sheet, index=False, startrow=3)
+    pricing.export_frame(result).to_excel(
+        writer, sheet_name=sheet, index=False, startrow=3 + len(metrics) + 2
+    )
+
+
 def export_excel(ctx: dict, path: Path | None = None) -> Path:
     path = path or DELIVERABLES / XLSX_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -702,6 +799,7 @@ def export_excel(ctx: dict, path: Path | None = None) -> Path:
         _write_lifecycle_sheet(writer, ctx)
         _write_clv_sheet(writer, ctx)
         _write_returns_sheet(writer, ctx)
+        _write_pricing_sheet(writer, ctx)
         ctx["cv"].to_excel(writer, sheet_name="ForecastCV", index=False)
         ctx["cv_summary"].to_excel(writer, sheet_name="ForecastCV", index=False, startrow=len(ctx["cv"]) + 3)
         ctx["sku_table"].to_excel(writer, sheet_name="TopSKUs", index=False)

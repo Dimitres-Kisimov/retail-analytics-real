@@ -6,7 +6,7 @@ trading — a naive month-over-month read of the tail would be wrong.
 
 All figures are light-mode PNGs set in the shared "field notes" plate system
 (``retail.plate``): numbered plates, hairline chrome, one validated palette
-(single-hue blue for measured magnitude, green for the returns family), and the
+(crate-stamp rust for measured magnitude, price-tag berry for the returns family), and the
 dataset attribution designed into every footer. Reference statistics (median,
 mean) are drawn dotted so they never read as data marks.
 """
@@ -24,7 +24,7 @@ import pandas as pd
 
 from retail import plate
 from retail.paths import FIGURES
-from retail.plate import BLUE, GREEN, INK_2, MUTED, SURFACE
+from retail.plate import BERRY, INK_2, MUTED, RUST, SURFACE
 
 
 def _new_axes(figsize: tuple[float, float] = (9, 4.9)) -> tuple[plt.Figure, plt.Axes]:
@@ -45,7 +45,7 @@ def fig_monthly_revenue(sales: pd.DataFrame, out_dir: Path = FIGURES) -> Path:
     monthly = sales.groupby("YearMonth", observed=True)["Revenue"].sum()
     fig, ax = _new_axes()
     x = np.arange(len(monthly))
-    ax.plot(x, monthly.to_numpy() / 1e6, color=BLUE, linewidth=2, marker="o", markersize=4)
+    ax.plot(x, monthly.to_numpy() / 1e6, color=RUST, linewidth=2, marker="o", markersize=4)
     ax.set_xticks(x)
     ax.set_xticklabels(monthly.index, rotation=45, ha="right", fontsize=8)
     ax.set_ylabel("revenue (GBP, millions)")
@@ -91,7 +91,7 @@ def fig_top_products(sales: pd.DataFrame, out_dir: Path = FIGURES, n: int = 10) 
     fig, ax = _new_axes(figsize=(9, 5.2))
     ax.grid(axis="y", visible=False)
     ax.grid(axis="x", visible=True)
-    ax.barh(labels, values, color=BLUE, height=0.62)
+    ax.barh(labels, values, color=RUST, height=0.62)
     ax.set_xlabel("revenue (GBP, thousands)")
     ax.set_title(f"Top {n} products by revenue")
     for i, v in enumerate(values):
@@ -114,7 +114,7 @@ def fig_top_countries(sales: pd.DataFrame, out_dir: Path = FIGURES, n: int = 10)
     fig, ax = _new_axes(figsize=(9, 5.2))
     ax.grid(axis="y", visible=False)
     ax.grid(axis="x", visible=True)
-    ax.barh(top.index[::-1], (top.to_numpy() / 1e6)[::-1], color=BLUE, height=0.62)
+    ax.barh(top.index[::-1], (top.to_numpy() / 1e6)[::-1], color=RUST, height=0.62)
     ax.set_xlabel("revenue (GBP, millions)")
     ax.set_title(
         f"Top {n} countries by revenue - the UK is {100 * uk_share:.0f}% of the total"
@@ -130,7 +130,7 @@ def fig_order_values(sales: pd.DataFrame, out_dir: Path = FIGURES) -> Path:
     order_values = order_values[order_values > 0]
     bins = np.logspace(0, np.log10(order_values.max()), 60)
     fig, ax = _new_axes()
-    ax.hist(order_values, bins=bins, color=BLUE, edgecolor=SURFACE, linewidth=0.4)
+    ax.hist(order_values, bins=bins, color=RUST, edgecolor=SURFACE, linewidth=0.4)
     ax.set_xscale("log")
     ax.set_xlabel("order value (GBP, log scale)")
     ax.set_ylabel("orders")
@@ -155,7 +155,7 @@ def fig_returns_rate(sales: pd.DataFrame, returns: pd.DataFrame, out_dir: Path =
     rate = returns_rate_table(sales, returns)
     fig, ax = _new_axes()
     x = np.arange(len(rate))
-    ax.plot(x, 100 * rate.to_numpy(), color=GREEN, linewidth=2, marker="o", markersize=4)
+    ax.plot(x, 100 * rate.to_numpy(), color=BERRY, linewidth=2, marker="o", markersize=4)
     ax.set_xticks(x)
     ax.set_xticklabels(rate.index, rotation=45, ha="right", fontsize=8)
     ax.set_ylabel("returned value / gross sales (%)")
@@ -184,7 +184,7 @@ def fig_missing_customers(sales: pd.DataFrame, out_dir: Path = FIGURES) -> Path:
     )
     fig, ax = _new_axes()
     x = np.arange(len(share))
-    ax.plot(x, share.to_numpy(), color=BLUE, linewidth=2, marker="o", markersize=4)
+    ax.plot(x, share.to_numpy(), color=RUST, linewidth=2, marker="o", markersize=4)
     ax.set_xticks(x)
     ax.set_xticklabels(share.index, rotation=45, ha="right", fontsize=8)
     ax.set_ylabel("rows without CustomerID (%)")

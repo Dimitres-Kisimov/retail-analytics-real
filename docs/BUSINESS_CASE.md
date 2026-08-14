@@ -98,6 +98,32 @@ win-back campaign must beat before claiming credit.
 matrix), `lifecycle_stages.csv`, `lifecycle_flows.csv` and the committed
 `figures/lifecycle_stages.svg`.
 
+## 7. Price ladders → what the transactions can and cannot say about pricing
+
+**Measured:** 4,342 of 4,895 SKUs (88.7%) sold at more than one price. On the 1,342 SKUs
+with a real ladder (≥ 4 distinct prices, ≥ 200 lines — 79.7% of revenue), the median SKU
+has 6 rungs and a p90/p10 spread of 2.00×; 39.5% of units went below the posted (modal)
+price, 51.5% at it, 9.0% above it, for a price realization of 98.6%. Two independent
+log-log price/quantity slopes land at -1.71 (within-week, i.e. the volume-discount
+schedule alone) and -1.67 (market-adjusted, week to week); 825 of 1,113 SKUs beat their
+own seeded permutation null.
+
+**Why it matters:** the first operational value here is *visibility* — a business that
+believes it has one price per SKU actually has six, and the gap between posted and
+realized price is measurable per SKU rather than argued about. The second is a guard
+rail. The arithmetic gap between booked revenue and revenue-at-posted-price is GBP
+216,608 (1.4%), and it would be easy to present that as recoverable margin. It is not:
+the same data says quantity falls as price rises, the within-week slope shows a number
+near -1.7 arises from the discount schedule with *no* demand response at all, and the two
+slopes correlate at only r = 0.20 per SKU. *What the numbers support* is picking the
+handful of SKUs whose ladder is widest and whose posted price is followed least, and
+testing a deliberate price change on them — with a holdout — because **nothing here is
+causal and no per-SKU elasticity is claimed**.
+
+**Deliverable:** the PriceLadder sheet (headline metrics + the full per-SKU table with
+both slopes and the permutation p-value), `price_ladder.csv`, and the committed
+`figures/price_ladder.png` (plate 17).
+
 ## Caveats that bound all of the above
 
 Single retailer, UK-heavy, gift-seasonal, 2009-2011 nominal GBP, wholesale/retail mix,

@@ -72,17 +72,18 @@ ENTRY = "(pre-acquisition)"  # flow-matrix source row for first-ever purchases
 
 _CODE = {name: i + 1 for i, name in enumerate(STATES)}  # 0 = not yet acquired
 
-# Palette shared with every other plate (retail.plate; validated light-mode
-# categorical order). Stack adjacency blue->yellow->green (+ magenta across the
+# Palette shared with every other plate (retail.plate; validated goods-palette
+# categorical order). Stack adjacency rust->ochre->indigo (+ berry across the
 # axis) passes the CVD checks; at-risk/dormant are DELIBERATE neutrals --
 # inactive stages are recessive by design, with identity carried by stack order
-# + labels + legend (never by color alone).
-_RETAINED = _plate.BLUE
-_RESURRECTED = _plate.YELLOW
-_NEW = _plate.GREEN
-_CHURNED = _plate.MAGENTA   # below the axis
-_AT_RISK = "#b4b2a9"        # neutral mid
-_DORMANT = "#dcdbd3"        # neutral light
+# + labels + legend (never by color alone). The neutrals are warm greys mixed
+# toward the kraft paper, so an inactive stage recedes into the page.
+_RETAINED = _plate.RUST
+_RESURRECTED = _plate.OCHRE
+_NEW = _plate.INDIGO
+_CHURNED = _plate.BERRY   # below the axis
+_AT_RISK = "#b3a795"        # warm neutral mid
+_DORMANT = "#ded6c8"        # warm neutral light
 
 STATE_FILL = {
     "new": _NEW,

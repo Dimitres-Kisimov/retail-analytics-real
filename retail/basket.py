@@ -529,7 +529,7 @@ def fig_top_rules(
 
     from retail import plate
     from retail.eda import _new_axes
-    from retail.plate import BLUE, INK_2, MUTED
+    from retail.plate import INK_2, MUTED, RUST
 
     solid = dedupe_by_itemset([r for r in rules if not r.thin_support])[:n]
     if not solid:
@@ -540,7 +540,7 @@ def fig_top_rules(
     fig, ax = _new_axes(figsize=(9.5, 6.6))
     ax.grid(axis="y", visible=False)
     ax.grid(axis="x", visible=True)
-    ax.barh(range(len(solid)), lifts, color=BLUE, height=0.62)
+    ax.barh(range(len(solid)), lifts, color=RUST, height=0.62)
     ax.set_yticks(range(len(solid)))
     ax.set_yticklabels(labels, fontsize=7.5)
     ax.set_xlabel("lift (co-purchase frequency vs independence; 1 = independent)")

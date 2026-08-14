@@ -20,11 +20,23 @@ field notebook on real data:
   outline, and plates that contain model output say so in the footer -- the
   real-vs-modelled distinction is visual, not a footnote.
 
-The palette is the validated light-mode set documented in docs/BUSINESS_CASE.md
-(single-hue blue for magnitude, fixed categorical order for identity). The
-sequential scale is BINNED (max 7 classes) so every heatmap cell can carry an
-AA-contrast label on its own fill -- the exact value is always printed, the
-shade is legibility only.
+The palette is a **goods palette**, not a dashboard palette: the subject is a
+giftware wholesaler's stock, so the plates are set on kraft paper in the inks a
+warehouse actually marks its goods with -- crate-stamp rust, ledger indigo, kraft
+ochre, price-tag berry. The categorical order is fixed (identity never depends on
+rank), and the sequential scale for magnitude is a single kraft hue, BINNED (max 7
+classes) so every heatmap cell can carry an AA-contrast label on its own fill --
+the exact value is always printed, the shade is legibility only.
+
+Both palettes are validated, not eyeballed. The categorical four clear the
+colour-vision and contrast gates as an ordered set (worst adjacent CVD dE 19.5,
+normal-vision dE 24.4, every slot >= 3:1 on the paper surface -- the previous
+dashboard-blue set had two slots below 3:1). The sequential ramp is monotone in
+lightness with every adjacent gap >= 0.06 OKLCH L. One documented exception: the
+lightest bin sits at 1.10:1 against the paper, below the 2:1 an ordinal ramp would
+normally want. That is deliberate -- the lowest retention bin must recede into the
+page -- and the compensating control is the one this system already enforces in a
+test: every cell prints its own value in an ink that clears WCAG AA on that fill.
 """
 
 from __future__ import annotations
@@ -37,37 +49,39 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 # --------------------------------------------------------------------------- #
-# Palette tokens (validated light-mode set; single source of truth)
+# Palette tokens (validated goods palette; single source of truth)
 # --------------------------------------------------------------------------- #
-BLUE = "#2a78d6"
-GREEN = "#008300"
-MAGENTA = "#e87ba4"
-YELLOW = "#eda100"
-SURFACE = "#fcfcfb"
-INK = "#0b0b0b"
-INK_2 = "#52514e"
-MUTED = "#898781"
-GRID = "#e1e0d9"
+RUST = "#a8492b"        # crate-stamp rust -- the house ink for measured magnitude
+INDIGO = "#3d4a99"      # ledger indigo -- the second entity on a plate
+OCHRE = "#b5820f"       # kraft ochre
+BERRY = "#963a70"       # price-tag berry
+SURFACE = "#faf7f0"     # kraft paper
+INK = "#14100c"
+INK_2 = "#554c40"
+MUTED = "#8a8071"
+GRID = "#e6dfd2"
 
-CATEGORICAL = [BLUE, GREEN, MAGENTA, YELLOW]
+CATEGORICAL = [RUST, INDIGO, OCHRE, BERRY]
 
 # Model overlays: dashed and/or gray -- never solid ink (see module docstring).
 MODEL_GRAY = MUTED
 MODEL_DASH = (0, (4.0, 2.4))          # matplotlib linestyle tuple
 MODEL_DASH_SVG = "5,3"                # the same dash for hand-drawn SVG strokes
 
-# Sequential blue, binned. Each bin carries the label ink that clears WCAG AA
-# (4.5:1) on its own fill, so a value printed inside a cell is always legible.
-# Bounds are retention percentages: [lo, hi) except the last, which includes 100.
+# Sequential kraft, one hue (OKLCH h 52), binned. Each bin carries the label ink
+# that clears WCAG AA (4.5:1) on its own fill, so a value printed inside a cell is
+# always legible; adjacent bins are >= 0.06 apart in OKLCH lightness so the steps
+# are visible as steps. Bounds are retention percentages: [lo, hi) except the
+# last, which includes 100 -- unchanged from the blue ramp this re-tones.
 SEQ_BINS: list[tuple[float, str, str]] = [
     # upper bound (%), cell fill, AA label ink on that fill
-    (5.0, "#cde2fb", INK),
-    (10.0, "#9ec5f4", INK),
-    (15.0, "#86b6ef", INK),
-    (20.0, "#6da7ec", INK),
-    (30.0, "#5598e7", INK),
-    (50.0, "#3987e5", INK),
-    (100.0, "#0d366b", "#ffffff"),    # dark anchor: the scale ends in real ink
+    (5.0, "#f8eae2", INK),
+    (10.0, "#efc9b3", INK),
+    (15.0, "#e9a67e", INK),
+    (20.0, "#e08346", INK),
+    (30.0, "#ca6c28", INK),
+    (50.0, "#a14f0c", "#ffffff"),
+    (100.0, "#6f3507", "#ffffff"),    # dark anchor: the scale ends in real ink
 ]
 SEQ_BIN_EDGES = [0.0, *(hi for hi, _f, _i in SEQ_BINS)]
 
@@ -105,6 +119,7 @@ PLATES: dict[str, tuple[int, str]] = {
     "returns": (14, "Returns anatomy"),
     "basket": (15, "Co-purchase rules"),
     "sku_forecast": (16, "SKU forecastability"),
+    "pricing": (17, "Price ladder"),
 }
 
 

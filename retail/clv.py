@@ -619,7 +619,7 @@ def fig_clv(result: CLVResult, out_dir=FIGURES):
     import matplotlib.pyplot as plt
 
     from retail import plate
-    from retail.plate import BLUE, INK, INK_2, MODEL_DASH, MUTED, SURFACE
+    from retail.plate import INK, INK_2, MODEL_DASH, MUTED, RUST, SURFACE
 
     if result.clv_table.empty:
         return None
@@ -632,7 +632,7 @@ def fig_clv(result: CLVResult, out_dir=FIGURES):
         bf = v.by_frequency
         idx = np.arange(len(bf))
         w = 0.4
-        ax1.bar(idx - w / 2, bf["actual_mean"], width=w, color=BLUE, label="actual")
+        ax1.bar(idx - w / 2, bf["actual_mean"], width=w, color=RUST, label="actual")
         ax1.bar(idx + w / 2, bf["predicted_mean"], width=w, facecolor=SURFACE,
                 edgecolor=INK_2, linewidth=1.1, linestyle=MODEL_DASH, label="predicted")
         ax1.set_xticks(idx)
@@ -652,7 +652,7 @@ def fig_clv(result: CLVResult, out_dir=FIGURES):
 
     # Panel B: Lorenz curve of predicted CLV (model output -> dashed by convention)
     cum_x, cum_y = lorenz_points(result.clv_table["clv"].to_numpy())
-    ax2.plot(100 * cum_x, 100 * cum_y, color=BLUE, linewidth=2, linestyle=MODEL_DASH)
+    ax2.plot(100 * cum_x, 100 * cum_y, color=RUST, linewidth=2, linestyle=MODEL_DASH)
     ax2.plot([0, 100], [0, 100], color=MUTED, linewidth=1, linestyle=":")
     ax2.set_xlabel("share of customers (%, lowest CLV first)")
     ax2.set_ylabel("share of predicted CLV (%)")

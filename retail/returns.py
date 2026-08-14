@@ -369,7 +369,7 @@ def fig_returns(result: ReturnsResult, out_dir: Path = FIGURES) -> Path | None:
     import matplotlib.pyplot as plt
 
     from retail import plate
-    from retail.plate import GREEN, INK, INK_2
+    from retail.plate import BERRY, INK, INK_2
 
     plate.style()
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 5.6))
@@ -378,8 +378,8 @@ def fig_returns(result: ReturnsResult, out_dir: Path = FIGURES) -> Path | None:
     labels = lag["lag_bucket"].tolist()
     y = np.arange(len(labels))
     # Both panels measure the same quantity (returned value), so both wear the
-    # returns family's green -- color follows the entity across the plate set.
-    ax1.barh(y, lag["returned_value"].to_numpy() / 1e3, color=GREEN, height=0.66)
+    # returns family's berry -- color follows the entity across the plate set.
+    ax1.barh(y, lag["returned_value"].to_numpy() / 1e3, color=BERRY, height=0.66)
     ax1.set_yticks(y)
     ax1.set_yticklabels(labels, fontsize=9)
     ax1.invert_yaxis()
@@ -396,7 +396,7 @@ def fig_returns(result: ReturnsResult, out_dir: Path = FIGURES) -> Path | None:
     top = result.by_sku.head(10).iloc[::-1]
     desc = [str(d)[:28].strip().title() if d else str(c)
             for c, d in zip(top["StockCode"], top["Description"], strict=True)]
-    ax2.barh(np.arange(len(top)), top["returned_value"].to_numpy() / 1e3, color=GREEN, height=0.66)
+    ax2.barh(np.arange(len(top)), top["returned_value"].to_numpy() / 1e3, color=BERRY, height=0.66)
     ax2.set_yticks(np.arange(len(top)))
     ax2.set_yticklabels(desc, fontsize=8)
     ax2.grid(axis="y", visible=False)

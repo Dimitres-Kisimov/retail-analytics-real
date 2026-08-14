@@ -46,7 +46,7 @@ from retail.plate import INK_2 as _INK_2
 from retail.plate import MUTED as _MUTED
 from retail.plate import SURFACE as _SURFACE
 
-_BLUE_HEX = _plate.BLUE
+_CURVE_HEX = _plate.RUST
 
 # How many months-since-acquisition the SVG heatmap and the curve display.
 DISPLAY_OFFSETS = 12
@@ -280,10 +280,10 @@ def render_svg(result: CohortResult, offsets: int = DISPLAY_OFFSETS) -> str:
 
     pts = [_pt(int(r.offset), 100 * float(r.avg_retention)) for r in curve.itertuples(index=False)]
     poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-    p.append(f'<polyline points="{poly}" fill="none" stroke="{_BLUE_HEX}" stroke-width="2.2"/>')
+    p.append(f'<polyline points="{poly}" fill="none" stroke="{_CURVE_HEX}" stroke-width="2.2"/>')
     for (x, y), r in zip(pts, curve.itertuples(index=False), strict=True):
         # 2px surface ring keeps the markers legible where they cross the line
-        p.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{_BLUE_HEX}" '
+        p.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{_CURVE_HEX}" '
                  f'stroke="{_SURFACE}" stroke-width="2"/>')
         p.append(txt(x, curve_bottom + 14, str(int(r.offset)), 9, _MUTED, anchor="middle"))
 
